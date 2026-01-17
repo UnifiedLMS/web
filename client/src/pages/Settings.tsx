@@ -165,14 +165,14 @@ export default function SettingsPage() {
                 <CardHeader>
                   <CardTitle>Про додаток</CardTitle>
                 </CardHeader>
-                <CardContent className="flex items-start gap-4">
-                  <div className="bg-primary/10 p-3 rounded-xl">
-                    <img src={unifiedLogo} alt="Unified" className="h-10 w-auto" />
+                <CardContent className="flex items-center gap-4">
+                  <div className="bg-primary/10 p-3 rounded-xl flex items-center justify-center shrink-0">
+                    <img src={unifiedLogo} alt="Unified" className="h-10 w-auto object-contain" />
                   </div>
-                  <div>
-                    <h3 className="font-bold text-lg">Unified</h3>
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-lg truncate">Unified</h3>
                     <p className="text-muted-foreground">Версія 0.1.0 Alpha</p>
-                    <p className="text-sm text-muted-foreground mt-2">
+                    <p className="text-sm text-muted-foreground mt-2 leading-tight">
                       Розроблено для забезпечення сучасного та зручного навчального процесу.
                     </p>
                   </div>
