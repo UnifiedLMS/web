@@ -94,13 +94,19 @@ export default function SettingsPage() {
           <h1 className="text-3xl font-display font-bold">Налаштування</h1>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Зовнішній вигляд</CardTitle>
-            <CardDescription>
-              Налаштуйте інтерфейс відповідно до ваших вподобань
-            </CardDescription>
-          </CardHeader>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          className="space-y-8"
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle>Зовнішній вигляд</CardTitle>
+              <CardDescription>
+                Налаштуйте інтерфейс відповідно до ваших вподобань
+              </CardDescription>
+            </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
@@ -157,7 +163,8 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
     </div>
+  </div>
   );
 }

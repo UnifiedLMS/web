@@ -51,7 +51,12 @@ export default function Login() {
       >
         <Card className="bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl overflow-hidden">
           <CardContent className="pt-10 pb-8 px-8">
-            <div className="flex flex-col items-center mb-8">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="flex flex-col items-center mb-8">
               <motion.img
                 src={unifiedLogo}
                 alt="Unified Logo"
@@ -130,6 +135,7 @@ export default function Login() {
                 </Button>
               </form>
             </Form>
+            </motion.div>
           </CardContent>
         </Card>
         

@@ -73,7 +73,7 @@ export default function Dashboard() {
           transition={{ duration: 0.5 }}
           className="text-center space-y-6 max-w-lg mx-auto"
         >
-          <div className="w-24 h-24 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-6 text-primary animate-pulse">
+          <div className="w-24 h-24 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-6 text-primary">
             <Monitor className="w-12 h-12" />
           </div>
           
