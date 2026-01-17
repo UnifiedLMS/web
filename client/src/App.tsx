@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCheckToken } from "@/hooks/use-auth";
-import unifiedLogo from "@assets/unified_logo_1768624517472.png";
+import unifiedLogo from "@assets/unified_logo.png";
 
 // Pages
 import Login from "@/pages/Login";

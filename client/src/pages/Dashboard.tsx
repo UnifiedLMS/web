@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Settings, LogOut, Moon, Sun, Monitor } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import unifiedLogo from "@assets/unified_logo_1768624517472.png";
+import unifiedLogo from "@assets/unified_logo.png";
 import { useLogout } from "@/hooks/use-auth";
 
 export default function Dashboard() {

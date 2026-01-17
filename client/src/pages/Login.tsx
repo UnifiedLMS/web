@@ -11,7 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { BackgroundAnimation } from "@/components/background-animation";
-import unifiedLogo from "@assets/unified_logo_1768624517472.png";
+import unifiedLogo from "@assets/unified_logo.png";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {

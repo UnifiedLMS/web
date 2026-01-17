@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, Moon, Sun } from "lucide-react";
-import unifiedLogo from "@assets/unified_logo_1768624517472.png";
+import unifiedLogo from "@assets/unified_logo.png";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLogout } from "@/hooks/use-auth";
 
