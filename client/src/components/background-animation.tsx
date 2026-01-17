@@ -18,7 +18,7 @@ export function BackgroundAnimation() {
           repeat: Infinity,
           ease: "easeInOut",
         }}
-        className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-primary/20 blur-[100px]"
+        className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-primary/30 blur-[100px]"
       />
       
       <motion.div
@@ -34,7 +34,7 @@ export function BackgroundAnimation() {
           ease: "easeInOut",
           delay: 1,
         }}
-        className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-blue-500/10 blur-[120px]"
+        className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-primary/20 blur-[120px]"
       />
       
       {/* Grid overlay */}

@@ -124,7 +124,7 @@ export default function Login() {
 
                 <Button 
                   type="submit" 
-                  className="w-full bg-[#00aaff] hover:bg-[#0099e6] text-white font-semibold h-12 mt-2 shadow-[0_0_20px_rgba(0,170,255,0.3)] hover:shadow-[0_0_30px_rgba(0,170,255,0.5)] transition-all duration-300"
+                  className="w-full bg-primary hover:bg-primary/90 text-white font-semibold h-12 mt-2 shadow-[0_0_20px_rgba(var(--primary),0.3)] hover:shadow-[0_0_30px_rgba(var(--primary),0.5)] transition-all duration-300"
                   disabled={loginMutation.isPending}
                 >
                   {loginMutation.isPending ? (
