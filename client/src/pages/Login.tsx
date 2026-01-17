@@ -60,7 +60,6 @@ export default function Login() {
                 transition={{ type: "spring", stiffness: 300 }}
               />
               <h1 className="text-3xl font-display font-bold text-white tracking-tight">Unified</h1>
-              <p className="text-white/60 text-sm mt-1">Система управління навчанням</p>
             </div>
 
             <Form {...form}>
@@ -135,7 +134,7 @@ export default function Login() {
         </Card>
         
         <p className="text-center text-white/30 text-xs mt-8">
-          &copy; {new Date().getFullYear()} Unified Learning System
+          &copy; {new Date().getFullYear()} Unified
         </p>
       </motion.div>
     </div>

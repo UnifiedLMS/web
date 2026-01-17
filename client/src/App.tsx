@@ -65,10 +65,40 @@ function AppContent() {
   const checkTokenMutation = useCheckToken();
 
   useEffect(() => {
-    // 1. Initial theme setup from local storage
+    // 1. Initial theme and color setup from local storage
     const savedTheme = localStorage.getItem("theme");
+    const savedColor = localStorage.getItem("highlightColor");
+
     if (savedTheme === "dark") {
       document.documentElement.classList.add("dark");
+    }
+
+    if (savedColor) {
+      // Helper to apply stored color
+      const hex = savedColor;
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      
+      // Basic RGB to HSL for Tailwind H S L format
+      let rN = r / 255, gN = g / 255, bN = b / 255;
+      const max = Math.max(rN, gN, bN), min = Math.min(rN, gN, bN);
+      let h = 0, s, l = (max + min) / 2;
+      if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        if (max === rN) h = (gN - bN) / d + (gN < bN ? 6 : 0);
+        else if (max === gN) h = (bN - rN) / d + 2;
+        else if (max === bN) h = (rN - gN) / d + 4;
+        h /= 6;
+      } else {
+        s = 0;
+      }
+      const H = Math.round(h * 360), S = Math.round(s * 100), L = Math.round(l * 100);
+      
+      document.documentElement.style.setProperty('--primary', `${H} ${S}% ${L}%`);
+      document.documentElement.style.setProperty('--ring', `${H} ${S}% ${L}%`);
+      document.documentElement.style.setProperty('--accent', `${H} ${S}% ${L}%`);
     }
 
     // 2. Start token check immediately

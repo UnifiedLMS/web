@@ -7,29 +7,34 @@ import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, Moon, Sun } from "lucide-react";
 import unifiedLogo from "@assets/unified_logo_1768624517472.png";
 
-// HSL Helper for color picker (simplified)
-// In a real app we might use a color manipulation library
-function hexToHSL(hex: string) {
-  // Mock conversion or use predefined palette for MVP
-  return hex;
-}
+// HSL Helper for color conversion
+function rgbToHsl(r: number, g: number, b: number) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s, l = (max + min) / 2;
 
-const PREDEFINED_COLORS = [
-  { name: "Aqua", value: "rgb(0, 170, 255)", class: "bg-[rgb(0,170,255)]" },
-  { name: "Emerald", value: "rgb(16, 185, 129)", class: "bg-emerald-500" },
-  { name: "Violet", value: "rgb(139, 92, 246)", class: "bg-violet-500" },
-  { name: "Rose", value: "rgb(244, 63, 94)", class: "bg-rose-500" },
-  { name: "Amber", value: "rgb(245, 158, 11)", class: "bg-amber-500" },
-];
+  if (max === min) {
+    h = s = 0;
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
 
 export default function SettingsPage() {
   const [isDark, setIsDark] = useState(false);
-  const [highlightColor, setHighlightColor] = useState("rgb(0, 170, 255)");
+  const [highlightColor, setHighlightColor] = useState("#00aaee");
 
   useEffect(() => {
-    // Load saved settings
     const savedTheme = localStorage.getItem("theme");
-    const savedColor = localStorage.getItem("highlightColor");
+    const savedColor = localStorage.getItem("highlightColor") || "#00aaee";
 
     if (savedTheme === "dark") {
       setIsDark(true);
@@ -39,12 +44,20 @@ export default function SettingsPage() {
       document.documentElement.classList.remove("dark");
     }
 
-    if (savedColor) {
-      setHighlightColor(savedColor);
-      // Logic to apply color variable would go here
-      // For MVP we just save the preference
-    }
+    setHighlightColor(savedColor);
+    applyColor(savedColor);
   }, []);
+
+  const applyColor = (hex: string) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    const hsl = rgbToHsl(r, g, b);
+    
+    document.documentElement.style.setProperty('--primary', `${hsl.h} ${hsl.s}% ${hsl.l}%`);
+    document.documentElement.style.setProperty('--ring', `${hsl.h} ${hsl.s}% ${hsl.l}%`);
+    document.documentElement.style.setProperty('--accent', `${hsl.h} ${hsl.s}% ${hsl.l}%`);
+  };
 
   const toggleTheme = (checked: boolean) => {
     setIsDark(checked);
@@ -57,12 +70,11 @@ export default function SettingsPage() {
     }
   };
 
-  const changeColor = (color: string) => {
+  const changeColor = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const color = e.target.value;
     setHighlightColor(color);
     localStorage.setItem("highlightColor", color);
-    
-    // In a real implementation, we would update CSS variables here
-    // document.documentElement.style.setProperty('--primary', color);
+    applyColor(color);
   };
 
   return (
@@ -107,22 +119,17 @@ export default function SettingsPage() {
 
             <div className="space-y-3 pt-4 border-t">
               <Label className="text-base">Колір акценту</Label>
-              <div className="flex flex-wrap gap-3">
-                {PREDEFINED_COLORS.map((color) => (
-                  <button
-                    key={color.name}
-                    onClick={() => changeColor(color.value)}
-                    className={`
-                      w-10 h-10 rounded-full border-2 transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
-                      ${color.class}
-                      ${highlightColor === color.value ? "border-primary ring-2 ring-primary ring-offset-2" : "border-transparent"}
-                    `}
-                    title={color.name}
-                  />
-                ))}
+              <div className="flex items-center gap-4">
+                <input
+                  type="color"
+                  value={highlightColor}
+                  onChange={changeColor}
+                  className="w-12 h-12 rounded-lg cursor-pointer bg-transparent border-none"
+                />
+                <span className="text-sm font-mono text-muted-foreground uppercase">{highlightColor}</span>
               </div>
               <p className="text-sm text-muted-foreground pt-1">
-                Цей колір буде використовуватись для кнопок та активних елементів.
+                Виберіть будь-який колір для кнопок та активних елементів інтерфейсу.
               </p>
             </div>
           </CardContent>
@@ -137,7 +144,7 @@ export default function SettingsPage() {
               <img src={unifiedLogo} alt="Unified" className="h-10 w-auto" />
             </div>
             <div>
-              <h3 className="font-bold text-lg">Unified Learning System</h3>
+              <h3 className="font-bold text-lg">Unified</h3>
               <p className="text-muted-foreground">Версія 0.1.0 Alpha</p>
               <p className="text-sm text-muted-foreground mt-2">
                 Розроблено для забезпечення сучасного та зручного навчального процесу.
