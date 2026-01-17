@@ -5,6 +5,10 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import fetch from "node-fetch"; 
 import FormData from "form-data";
+import { exec } from "child_process";
+import { promisify } from "util";
+
+const execAsync = promisify(exec);
 
 export async function registerRoutes(
   httpServer: Server,
@@ -16,35 +20,24 @@ export async function registerRoutes(
     try {
       const { username, password } = api.auth.login.input.parse(req.body);
 
-      // Construct form data as expected by the C# Unity backend
-      // form.AddField("grant_type", "password");
-      // form.AddField("username", username);
-      // form.AddField("password", password);
-      // form.AddField("scope", ""); ...
+      // Using curl for proxying as requested
+      const curlCommand = `curl -X POST https://unifyapi.onrender.com/api/v1/auth/login \
+        -d "grant_type=password" \
+        -d "username=${username}" \
+        -d "password=${password}" \
+        -d "scope=" \
+        -d "client_id=" \
+        -d "client_secret=" \
+        -H "Content-Type: application/x-www-form-urlencoded"`;
+
+      const { stdout, stderr } = await execAsync(curlCommand);
       
-      const formData = new URLSearchParams();
-      formData.append('grant_type', 'password');
-      formData.append('username', username);
-      formData.append('password', password);
-      formData.append('scope', '');
-      formData.append('client_id', '');
-      formData.append('client_secret', '');
-
-      const response = await fetch("https://unifyapi.onrender.com/api/v1/auth/login", {
-        method: "POST",
-        body: formData,
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        }
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Login Proxy Error:", response.status, errorText);
+      if (stderr && !stdout) {
+        console.error("CURL Login Error:", stderr);
         return res.status(401).json({ message: "Неправильні дані або помилка сервера" });
       }
 
-      const data = await response.json();
+      const data = JSON.parse(stdout);
       res.json(data);
 
     } catch (err) {
@@ -58,21 +51,18 @@ export async function registerRoutes(
     try {
       const { token } = api.auth.checkToken.input.parse(req.body);
 
-      // C# sends an empty form for token check
-      const response = await fetch("https://unifyapi.onrender.com/api/v1/auth/token", {
-        method: "POST",
-        body: "", // Empty body
-        headers: {
-          "access-token": token,
-          "token-type": "bearer"
-        }
-      });
+      // Using curl for token check proxying
+      const curlCommand = `curl -X POST https://unifyapi.onrender.com/api/v1/auth/token \
+        -H "access-token: ${token}" \
+        -H "token-type: bearer"`;
 
-      if (!response.ok) {
+      const { stdout, stderr } = await execAsync(curlCommand);
+
+      if (stderr && !stdout) {
          return res.status(401).json({ message: "Token invalid" });
       }
 
-      const data = await response.json();
+      const data = JSON.parse(stdout);
       res.json(data);
 
     } catch (err) {
