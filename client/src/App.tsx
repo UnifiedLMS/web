@@ -48,13 +48,35 @@ function EntryScreen({ onComplete }: { onComplete: () => void }) {
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={Login} /> {/* Default to Login, EntryScreen handles redirection */}
-      <Route path="/login" component={Login} />
-      <Route path="/dashboard" component={Dashboard} />
-      <Route path="/settings" component={Settings} />
-      <Route component={NotFound} />
-    </Switch>
+    <AnimatePresence mode="wait">
+      <Switch>
+        <Route path="/">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <Login />
+          </motion.div>
+        </Route>
+        <Route path="/login">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <Login />
+          </motion.div>
+        </Route>
+        <Route path="/dashboard">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <Dashboard />
+          </motion.div>
+        </Route>
+        <Route path="/settings">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <Settings />
+          </motion.div>
+        </Route>
+        <Route>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <NotFound />
+          </motion.div>
+        </Route>
+      </Switch>
+    </AnimatePresence>
   );
 }
 

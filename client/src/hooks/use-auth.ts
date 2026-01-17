@@ -14,9 +14,6 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: async (credentials: LoginRequest) => {
-      // Mocking the proxy call structure for frontend generation as requested
-      // In a real scenario, this would hit the actual backend endpoint
-      // Using the path from shared/routes.ts
       const res = await fetch(api.auth.login.path, {
         method: api.auth.login.method,
         headers: { "Content-Type": "application/json" },
@@ -24,15 +21,18 @@ export function useLogin() {
       });
 
       if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
         if (res.status === 401) throw new Error("Невірний логін або пароль");
-        throw new Error("Помилка сервера. Спробуйте пізніше.");
+        if (res.status === 403) throw new Error(error.message || "У вас немає прав адміністратора");
+        throw new Error(error.message || "Помилка сервера. Спробуйте пізніше.");
       }
 
       return (await res.json()) as AuthResponse;
     },
     onSuccess: (data) => {
       localStorage.setItem("unified_token", data.access_token);
-      localStorage.setItem("unified_role", data.role);
+      localStorage.setItem("unified_user", JSON.stringify(data));
+      queryClient.setQueryData(["/api/user"], data);
       setLocation("/dashboard");
     },
   });
@@ -51,19 +51,37 @@ export function useCheckToken() {
         throw new Error("Token invalid");
       }
 
-      return (await res.json()) as AuthResponse;
+      const data = (await res.json()) as AuthResponse;
+      return data;
     },
+    onSuccess: (data) => {
+      localStorage.setItem("unified_user", JSON.stringify(data));
+      queryClient.setQueryData(["/api/user"], data);
+    }
+  });
+}
+
+export function useUser() {
+  return useQuery<AuthResponse | null>({
+    queryKey: ["/api/user"],
+    queryFn: () => {
+      const saved = localStorage.getItem("unified_user");
+      return saved ? JSON.parse(saved) : null;
+    },
+    staleTime: Infinity,
   });
 }
 
 export function useLogout() {
   const [, setLocation] = useLocation();
+  const { data: user } = useUser();
 
   const logout = () => {
     localStorage.removeItem("unified_token");
-    localStorage.removeItem("unified_role");
+    localStorage.removeItem("unified_user");
+    queryClient.setQueryData(["/api/user"], null);
     setLocation("/login");
   };
 
-  return { logout };
+  return { logout, user };
 }

@@ -38,6 +38,13 @@ export async function registerRoutes(
       }
 
       const data = JSON.parse(stdout);
+      
+      // Role-based access control (admins only)
+      if (data.role !== "admins") {
+        console.warn(`Access denied for user ${username}: Role is ${data.role}`);
+        return res.status(403).json({ message: "У вас немає прав адміністратора для входу в цей інтерфейс" });
+      }
+
       res.json(data);
 
     } catch (err) {
@@ -63,6 +70,12 @@ export async function registerRoutes(
       }
 
       const data = JSON.parse(stdout);
+      
+      // Role-based access control (admins only)
+      if (data.role !== "admins") {
+        return res.status(403).json({ message: "Недостатньо прав" });
+      }
+
       res.json(data);
 
     } catch (err) {

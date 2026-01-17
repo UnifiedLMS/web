@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function Dashboard() {
-  const { logout } = useLogout();
+  const { logout, user } = useLogout();
   const [location, setLocation] = useLocation();
 
   // Redirect if logic fails somewhere (extra safety)
@@ -34,14 +34,19 @@ export default function Dashboard() {
             <img src={unifiedLogo} alt="Logo" className="h-8 w-auto" />
             <span className="font-display font-bold text-xl hidden md:inline-block">Unified</span>
             <div className="h-6 w-px bg-border mx-2 hidden md:block" />
-            <span className="text-sm font-medium text-muted-foreground px-2 py-1 bg-secondary rounded-md">
-              Адміністративний інтерфейс
-            </span>
+            <div className="flex flex-col">
+              <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Адмін-панель</span>
+              {user && (
+                <span className="text-sm font-medium text-foreground">
+                  {user.username}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
             <Link href="/settings">
-              <Button variant="ghost" size="icon" className="text-muted-foreground">
+              <Button variant="ghost" size="icon" className="text-muted-foreground transition-all duration-300 hover:rotate-90">
                 <Settings className="h-5 w-5" />
                 <span className="sr-only">Налаштування</span>
               </Button>
@@ -51,7 +56,7 @@ export default function Dashboard() {
               variant="ghost" 
               size="icon" 
               onClick={logout}
-              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10 transition-all duration-300"
             >
               <LogOut className="h-5 w-5" />
               <span className="sr-only">Вихід</span>

@@ -70,6 +70,11 @@ export default function SettingsPage() {
     }
   };
 
+  const handleLogout = () => {
+    // Fade out logic if needed, but for now just logout
+    logout();
+  };
+
   const changeColor = (e: React.ChangeEvent<HTMLInputElement>) => {
     const color = e.target.value;
     setHighlightColor(color);
