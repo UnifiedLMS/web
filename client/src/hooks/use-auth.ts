@@ -1,5 +1,6 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { api, type LoginRequest, type AuthResponse } from "@shared/routes";
+import { queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 
 // Helper to update CSS variable for primary color
