@@ -77,7 +77,21 @@ export function useLogout() {
   const [, setLocation] = useLocation();
   const { data: user } = useUser();
 
-  const logout = () => {
+  const logout = async () => {
+    const token = localStorage.getItem("unified_token");
+    if (token) {
+      try {
+        await fetch("https://unifyapi.onrender.com/api/v1/auth/logout", {
+          method: "POST",
+          headers: {
+            "access-token": token,
+            "token-type": "bearer"
+          }
+        });
+      } catch (e) {
+        console.error("[LogOut] Logout request failed:", e);
+      }
+    }
     localStorage.removeItem("unified_token");
     localStorage.removeItem("unified_user");
     queryClient.setQueryData(["/api/user"], null);

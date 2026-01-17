@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, Moon, Sun } from "lucide-react";
 import unifiedLogo from "@assets/unified_logo_1768624517472.png";
+import { motion, AnimatePresence } from "framer-motion";
+import { useLogout } from "@/hooks/use-auth";
 
 // HSL Helper for color conversion
 function rgbToHsl(r: number, g: number, b: number) {
@@ -31,6 +33,8 @@ function rgbToHsl(r: number, g: number, b: number) {
 export default function SettingsPage() {
   const [isDark, setIsDark] = useState(false);
   const [highlightColor, setHighlightColor] = useState("#00aaee");
+  const { logout } = useLogout();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
@@ -70,8 +74,10 @@ export default function SettingsPage() {
     }
   };
 
-  const handleLogout = () => {
-    // Fade out logic if needed, but for now just logout
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    // Wait for animation
+    await new Promise(resolve => setTimeout(resolve, 1000));
     logout();
   };
 
@@ -83,88 +89,109 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-2xl mx-auto space-y-8">
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard">
-            <Button variant="ghost" size="icon" className="-ml-2">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <h1 className="text-3xl font-display font-bold">Налаштування</h1>
-        </div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-          className="space-y-8"
+    <AnimatePresence mode="wait">
+      {!isLoggingOut && (
+        <motion.div 
+          key="settings-content"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0, y: 50 }}
+          transition={{ duration: 1 }}
+          className="min-h-screen bg-background p-4 md:p-8"
         >
-          <Card>
-            <CardHeader>
-              <CardTitle>Зовнішній вигляд</CardTitle>
-              <CardDescription>
-                Налаштуйте інтерфейс відповідно до ваших вподобань
-              </CardDescription>
-            </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="theme-toggle" className="text-base">
-                  Темна тема
-                </Label>
-                <div className="text-sm text-muted-foreground">
-                  Перемикання між світлою та темною темою
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Sun className="h-4 w-4 text-muted-foreground" />
-                <Switch 
-                  id="theme-toggle" 
-                  checked={isDark} 
-                  onCheckedChange={toggleTheme} 
-                />
-                <Moon className="h-4 w-4 text-muted-foreground" />
-              </div>
+          <div className="max-w-2xl mx-auto space-y-8">
+            <div className="flex items-center gap-4">
+              <Link href="/dashboard">
+                <Button variant="ghost" size="icon" className="-ml-2">
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+              </Link>
+              <h1 className="text-3xl font-display font-bold">Налаштування</h1>
             </div>
 
-            <div className="space-y-3 pt-4 border-t">
-              <Label className="text-base">Колір акценту</Label>
-              <div className="flex items-center gap-4">
-                <input
-                  type="color"
-                  value={highlightColor}
-                  onChange={changeColor}
-                  className="w-12 h-12 rounded-lg cursor-pointer bg-transparent border-none"
-                />
-                <span className="text-sm font-mono text-muted-foreground uppercase">{highlightColor}</span>
-              </div>
-              <p className="text-sm text-muted-foreground pt-1">
-                Виберіть будь-який колір для кнопок та активних елементів інтерфейсу.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-8"
+            >
+              <Card>
+                <CardHeader>
+                  <CardTitle>Зовнішній вигляд</CardTitle>
+                  <CardDescription>
+                    Налаштуйте інтерфейс відповідно до ваших вподобань
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="theme-toggle" className="text-base">
+                        Темна тема
+                      </Label>
+                      <div className="text-sm text-muted-foreground">
+                        Перемикання між світлою та темною темою
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Sun className="h-4 w-4 text-muted-foreground" />
+                      <Switch 
+                        id="theme-toggle" 
+                        checked={isDark} 
+                        onCheckedChange={toggleTheme} 
+                      />
+                      <Moon className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Про додаток</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-start gap-4">
-            <div className="bg-primary/10 p-3 rounded-xl">
-              <img src={unifiedLogo} alt="Unified" className="h-10 w-auto" />
-            </div>
-            <div>
-              <h3 className="font-bold text-lg">Unified</h3>
-              <p className="text-muted-foreground">Версія 0.1.0 Alpha</p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Розроблено для забезпечення сучасного та зручного навчального процесу.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-    </div>
-  </div>
+                  <div className="space-y-3 pt-4 border-t">
+                    <Label className="text-base">Колір акценту</Label>
+                    <div className="flex items-center gap-4">
+                      <input
+                        type="color"
+                        value={highlightColor}
+                        onChange={changeColor}
+                        className="w-12 h-12 rounded-lg cursor-pointer bg-transparent border-none"
+                      />
+                      <span className="text-sm font-mono text-muted-foreground uppercase">{highlightColor}</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground pt-1">
+                      Виберіть будь-який колір для кнопок та активних елементів інтерфейсу.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Про додаток</CardTitle>
+                </CardHeader>
+                <CardContent className="flex items-start gap-4">
+                  <div className="bg-primary/10 p-3 rounded-xl">
+                    <img src={unifiedLogo} alt="Unified" className="h-10 w-auto" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">Unified</h3>
+                    <p className="text-muted-foreground">Версія 0.1.0 Alpha</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Розроблено для забезпечення сучасного та зручного навчального процесу.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="pt-4">
+                <Button 
+                  variant="destructive" 
+                  className="w-full" 
+                  onClick={handleLogout}
+                >
+                  Вийти з акаунту
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
