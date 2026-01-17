@@ -23,12 +23,12 @@ Preferred communication style: Simple, everyday language.
 ### Backend Architecture
 - **Framework**: Express 5 running on Node.js
 - **API Pattern**: Proxy architecture - the server forwards authentication requests to an external API using curl commands
-- **Database ORM**: Drizzle ORM with PostgreSQL
-- **Session Management**: Uses connect-pg-simple for PostgreSQL session storage capability
+- **Database**: No local database used. All persistent data is handled by external APIs.
+- **Session Management**: Client-side token storage in localStorage.
 - **Build Process**: Custom esbuild script bundles server code, Vite builds the client
 
 ### Shared Code Structure
-- **Schema Definitions**: `shared/schema.ts` contains both database schemas (Drizzle) and API request/response schemas (Zod)
+- **Schema Definitions**: `shared/schema.ts` contains API request/response schemas (Zod)
 - **Route Definitions**: `shared/routes.ts` defines API endpoints with input/output types for type-safe API calls
 
 ### Authentication Flow
