@@ -19,6 +19,18 @@ import Students from "@/pages/Students";
 import Teachers from "@/pages/Teachers";
 import NotFound from "@/pages/not-found";
 
+// Student Pages
+import StudentHome from "@/pages/student/StudentHome";
+import StudentLessons from "@/pages/student/StudentLessons";
+import StudentSchedule from "@/pages/student/StudentSchedule";
+import StudentSettings from "@/pages/student/StudentSettings";
+
+// Teacher Pages
+import TeacherHome from "@/pages/teacher/TeacherHome";
+import TeacherSchedule from "@/pages/teacher/TeacherSchedule";
+import TeacherGrades from "@/pages/teacher/TeacherGrades";
+import TeacherSettings from "@/pages/teacher/TeacherSettings";
+
 // Entry Animation Component
 function EntryScreen({ onComplete }: { onComplete: () => void }) {
   return (
@@ -27,25 +39,55 @@ function EntryScreen({ onComplete }: { onComplete: () => void }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#000814] text-white"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-gradient-to-br from-[#0a0a0a] via-[#111111] to-[#0a0a0a] text-white"
     >
-      <div className="flex flex-col items-center">
-        <motion.img
-          src={unifiedLogo}
-          alt="Logo"
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1.2, opacity: 1 }}
-          transition={{ duration: 1.5, ease: "easeOut" }}
-          className="w-24 h-auto mb-6"
-        />
+      {/* Subtle background glow - uses primary/accent color */}
+      <div className="absolute inset-0">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40vw] h-[40vw] bg-primary/15 rounded-full blur-[100px]" />
+      </div>
+      
+      <div className="flex flex-col items-center relative">
+        <motion.div className="relative">
+          <motion.div
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1.5, opacity: 0.25 }}
+            transition={{ duration: 1.5, ease: "easeOut" }}
+            className="absolute inset-0 bg-primary/30 blur-2xl rounded-full"
+          />
+          <motion.img
+            src={unifiedLogo}
+            alt="Logo"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1.2, opacity: 1 }}
+            transition={{ duration: 1.5, ease: "easeOut" }}
+            className="w-24 h-auto relative"
+          />
+        </motion.div>
         <motion.h1
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.5, duration: 0.8 }}
-          className="text-4xl font-display font-bold tracking-tight"
+          className="text-4xl font-display font-bold tracking-tight mt-6"
         >
           Unified
         </motion.h1>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1, duration: 0.5 }}
+          className="mt-8"
+        >
+          <div className="flex gap-1">
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                animate={{ opacity: [0.3, 1, 0.3] }}
+                transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+                className="w-2 h-2 bg-primary rounded-full"
+              />
+            ))}
+          </div>
+        </motion.div>
       </div>
     </motion.div>
   );
@@ -100,6 +142,51 @@ function Router() {
             <Settings />
           </motion.div>
         </Route>
+        
+        {/* Student Routes */}
+        <Route path="/student">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <StudentHome />
+          </motion.div>
+        </Route>
+        <Route path="/student/lessons">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <StudentLessons />
+          </motion.div>
+        </Route>
+        <Route path="/student/schedule">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <StudentSchedule />
+          </motion.div>
+        </Route>
+        <Route path="/student/settings">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <StudentSettings />
+          </motion.div>
+        </Route>
+        
+        {/* Teacher Routes */}
+        <Route path="/teacher">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <TeacherHome />
+          </motion.div>
+        </Route>
+        <Route path="/teacher/schedule">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <TeacherSchedule />
+          </motion.div>
+        </Route>
+        <Route path="/teacher/grades">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <TeacherGrades />
+          </motion.div>
+        </Route>
+        <Route path="/teacher/settings">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <TeacherSettings />
+          </motion.div>
+        </Route>
+        
         <Route>
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
             <NotFound />
@@ -156,19 +243,19 @@ function AppContent() {
     // 2. Start token check immediately
     const token = localStorage.getItem("unified_token");
     
-    const checkAuth = async () => {
+    const checkAuth = async (): Promise<{ valid: boolean; role?: string }> => {
       if (token) {
         try {
-          await checkTokenMutation.mutateAsync(token);
-          // Token valid - will redirect to dashboard
-          return true;
+          const data = await checkTokenMutation.mutateAsync(token);
+          // Token valid - return role for redirect
+          return { valid: true, role: data.role };
         } catch (e) {
           // Token invalid
           localStorage.removeItem("unified_token");
-          return false;
+          return { valid: false };
         }
       }
-      return false;
+      return { valid: false };
     };
 
     // 3. Coordinate Animation + Auth Check
@@ -176,15 +263,23 @@ function AppContent() {
     const startTime = Date.now();
 
     const runSequence = async () => {
-      const isValid = await checkAuth();
+      const authResult = await checkAuth();
       
       const elapsed = Date.now() - startTime;
       const remaining = Math.max(0, minAnimationTime - elapsed);
 
       setTimeout(() => {
         setShowEntry(false);
-        if (isValid) {
-          setLocation("/dashboard");
+        if (authResult.valid) {
+          // Redirect based on role
+          const role = authResult.role;
+          if (role === "students") {
+            setLocation("/student");
+          } else if (role === "teachers") {
+            setLocation("/teacher");
+          } else {
+            setLocation("/dashboard");
+          }
         } else {
           setLocation("/login");
         }

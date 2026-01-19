@@ -10,9 +10,33 @@ import { Search, ArrowUpDown, Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { DashboardLayout } from "@/components/DashboardLayout";
 
+// API response structure for a single group entry
+interface GroupEntry {
+  degree: string;
+  course: number;
+  group: {
+    en: string;
+    ua: string;
+  };
+  specialty: string;
+  disciplines: Record<string, number>;
+  class_teacher_edbo: number;
+}
+
+// API response - object with degree categories as keys
+interface GroupsApiResponse {
+  [degreeCategory: string]: GroupEntry[];
+}
+
+// Flattened group for display
 interface Group {
   en: string;
-  [key: string]: any;
+  ua: string;
+  degree: string;
+  course: number;
+  specialty: string;
+  disciplines: Record<string, number>;
+  class_teacher_edbo: number;
 }
 
 interface Student {
@@ -41,15 +65,40 @@ export default function Spreadsheet() {
   const { toast } = useToast();
 
   // Fetch groups
-  const { data: groups = [], isLoading: groupsLoading, error: groupsError } = useQuery<Group[]>({
+  const { data: groups = [], isLoading: groupsLoading, error: groupsError, refetch: refetchGroups } = useQuery<Group[]>({
     queryKey: ["groups"],
     queryFn: async () => {
       try {
-        const response = await apiFetch<Group | Group[]>("/api/v1/groups/all");
-        // Handle both single group and array responses
-        const groupsArray = Array.isArray(response) ? response : [response];
-        console.log(`[Spreadsheet] Loaded ${groupsArray.length} group(s)`);
-        return groupsArray;
+        const response = await apiFetch<GroupsApiResponse>("/api/v1/groups/all");
+        
+        // The response is an object with degree categories as keys (skilled_worker, bachelor, etc.)
+        // Each category contains an array of group entries
+        const flattenedGroups: Group[] = [];
+        
+        if (response && typeof response === 'object') {
+          // Iterate over each degree category
+          for (const [category, groupEntries] of Object.entries(response)) {
+            if (Array.isArray(groupEntries)) {
+              // Process each group entry in this category
+              for (const entry of groupEntries) {
+                if (entry && entry.group && entry.group.en) {
+                  flattenedGroups.push({
+                    en: entry.group.en,
+                    ua: entry.group.ua || entry.group.en,
+                    degree: entry.degree,
+                    course: entry.course,
+                    specialty: entry.specialty,
+                    disciplines: entry.disciplines || {},
+                    class_teacher_edbo: entry.class_teacher_edbo,
+                  });
+                }
+              }
+            }
+          }
+        }
+        
+        console.log(`[Spreadsheet] Loaded ${flattenedGroups.length} group(s) from API`);
+        return flattenedGroups;
       } catch (error: any) {
         console.error("[Spreadsheet] Error loading groups:", error);
         toast({
@@ -60,6 +109,9 @@ export default function Spreadsheet() {
         throw error;
       }
     },
+    retry: 2,
+    retryDelay: 1000,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Fetch students for selected group
@@ -94,11 +146,18 @@ export default function Spreadsheet() {
     );
   }, [groups, searchQuery]);
 
-  // Get unique disciplines from students (if available)
+  // Get the currently selected group data
+  const selectedGroupData = useMemo(() => {
+    return groups.find(g => g.en === selectedGroup);
+  }, [groups, selectedGroup]);
+
+  // Get disciplines from the selected group
   const disciplines = useMemo(() => {
-    // Since we don't have discipline info in student data, we'll use placeholder columns
-    return ["Дисципліна 1", "Дисципліна 2", "Дисципліна 3"];
-  }, []);
+    if (selectedGroupData && selectedGroupData.disciplines) {
+      return Object.keys(selectedGroupData.disciplines);
+    }
+    return [];
+  }, [selectedGroupData]);
 
   // Sort students
   const sortedStudents = useMemo(() => {
@@ -158,24 +217,46 @@ export default function Spreadsheet() {
                 </div>
 
                 {groupsLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  <div className="flex flex-col items-center justify-center py-12 gap-3">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    <p className="text-sm text-muted-foreground">Завантаження груп...</p>
                   </div>
                 ) : groupsError ? (
-                  <div className="text-center text-destructive py-4">
-                    Помилка завантаження груп
+                  <div className="text-center py-8 space-y-3">
+                    <div className="text-destructive font-medium">Помилка завантаження груп</div>
+                    <p className="text-sm text-muted-foreground">
+                      Перевірте підключення до мережі та спробуйте ще раз
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => refetchGroups()}
+                    >
+                      Спробувати знову
+                    </Button>
+                  </div>
+                ) : filteredGroups.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    {searchQuery ? "Групи не знайдено" : "Немає доступних груп"}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-48 overflow-y-auto p-2 border rounded-md">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 max-h-64 overflow-y-auto p-3 border rounded-lg bg-muted/30">
                     {filteredGroups.map((group, index) => (
                       <Button
                         key={group.en || `group-${index}`}
                         variant={selectedGroup === group.en ? "default" : "outline"}
                         size="sm"
                         onClick={() => setSelectedGroup(group.en)}
-                        className="justify-start"
+                        className={`justify-start font-medium transition-all h-auto py-2 flex-col items-start ${
+                          selectedGroup === group.en 
+                            ? "shadow-md" 
+                            : "hover:bg-primary/10 hover:border-primary/30"
+                        }`}
                       >
-                        {group.en}
+                        <span className="font-semibold">{group.en}</span>
+                        <span className={`text-xs ${selectedGroup === group.en ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                          {group.course} курс · {group.degree === "bachelor" ? "Бакалавр" : group.degree === "Кваліфікований робітник" ? "КР" : group.degree}
+                        </span>
                       </Button>
                     ))}
                   </div>
@@ -184,74 +265,81 @@ export default function Spreadsheet() {
 
               {/* Spreadsheet Table */}
               {selectedGroup && (
-                <div className="border rounded-lg overflow-x-auto">
-                  {studentsLoading ? (
-                    <div className="flex items-center justify-center py-12">
-                      <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                <div className="space-y-4">
+                  {/* Selected group info */}
+                  {selectedGroupData && (
+                    <div className="flex items-center gap-4 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                      <div>
+                        <span className="font-semibold text-lg">{selectedGroupData.en}</span>
+                        <span className="text-muted-foreground ml-2">({selectedGroupData.ua})</span>
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        {selectedGroupData.specialty} · {selectedGroupData.course} курс · 
+                        {selectedGroupData.degree === "bachelor" ? " Бакалавр" : ` ${selectedGroupData.degree}`}
+                      </span>
+                      <span className="text-sm text-muted-foreground ml-auto">
+                        Дисциплін: {disciplines.length}
+                      </span>
                     </div>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        {/* Info rows */}
-                        <TableRow className="bg-muted/50">
-                          <TableHead rowSpan={4} className="border-r sticky left-0 bg-background z-10 min-w-[200px]">
-                            ПІБ
-                          </TableHead>
-                          {disciplines.map((disc) => (
-                            <TableHead key={disc} className="text-center min-w-[150px]">
-                              {disc}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                        <TableRow className="bg-muted/30">
-                          <TableHead className="border-r sticky left-0 bg-background z-10" />
-                          {disciplines.map((_, idx) => (
-                            <TableHead key={`info1-${idx}`} className="text-center text-sm text-muted-foreground">
-                              Інформація по відомості, 2025
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                        <TableRow className="bg-muted/20">
-                          <TableHead className="border-r sticky left-0 bg-background z-10" />
-                          {disciplines.map((_, idx) => (
-                            <TableHead key={`info2-${idx}`} className="text-center text-sm text-muted-foreground">
-                              Додаткова інформація
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                        <TableRow className="bg-muted/10">
-                          <TableHead className="border-r sticky left-0 bg-background z-10" />
-                          {disciplines.map((_, idx) => (
-                            <TableHead key={`info3-${idx}`} className="text-center text-sm text-muted-foreground">
-                              Технічна інформація
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {sortedStudents.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={disciplines.length + 1} className="text-center text-muted-foreground py-8">
-                              Немає студентів у цій групі
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          sortedStudents.map((student) => (
-                            <TableRow key={student.edbo_id}>
-                              <TableCell className="font-medium border-r sticky left-0 bg-background z-10">
-                                {getFullName(student)}
-                              </TableCell>
-                              {disciplines.map((_, idx) => (
-                                <TableCell key={`cell-${student.edbo_id}-${idx}`} className="text-center">
-                                  {/* Empty cells for data entry */}
-                                </TableCell>
-                              ))}
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
                   )}
+
+                  <div className="border rounded-lg overflow-x-auto bg-card">
+                    {studentsLoading ? (
+                      <div className="flex flex-col items-center justify-center py-16 gap-3">
+                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                        <p className="text-sm text-muted-foreground">Завантаження студентів...</p>
+                      </div>
+                    ) : disciplines.length === 0 ? (
+                      <div className="text-center text-muted-foreground py-12">
+                        У цієї групи немає зареєстрованих дисциплін
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          {/* Main header row */}
+                          <TableRow className="bg-muted/40 dark:bg-muted/20 border-b-2 border-border">
+                            <TableHead className="border-r border-border sticky left-0 bg-card z-10 min-w-[220px] font-semibold">
+                              ПІБ
+                            </TableHead>
+                            {disciplines.map((disc) => (
+                              <TableHead key={disc} className="text-center min-w-[140px] font-semibold">
+                                {disc}
+                              </TableHead>
+                            ))}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {sortedStudents.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={disciplines.length + 1} className="text-center text-muted-foreground py-12">
+                                Немає студентів у цій групі
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            sortedStudents.map((student, idx) => (
+                              <TableRow 
+                                key={student.edbo_id}
+                                className={idx % 2 === 0 ? "bg-transparent" : "bg-muted/20 dark:bg-muted/10"}
+                              >
+                                <TableCell className="font-medium border-r border-border sticky left-0 bg-card z-10">
+                                  {getFullName(student)}
+                                </TableCell>
+                                {disciplines.map((discipline, disciplineIdx) => (
+                                  <TableCell 
+                                    key={`cell-${student.edbo_id}-${disciplineIdx}`} 
+                                    className="text-center hover:bg-primary/5 transition-colors cursor-pointer"
+                                  >
+                                    {/* Empty cells for data entry */}
+                                    <span className="text-muted-foreground/30">—</span>
+                                  </TableCell>
+                                ))}
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </div>
                 </div>
               )}
 

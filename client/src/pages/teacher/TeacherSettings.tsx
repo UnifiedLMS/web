@@ -1,22 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
+import { motion } from "framer-motion";
 import { Moon, Sun, Mail, Lock, ChevronDown, Loader2, Eye, EyeOff } from "lucide-react";
 import unifiedLogo from "@assets/unified_logo.png";
-import { motion } from "framer-motion";
-import { useLogout } from "@/hooks/use-auth";
-import { DashboardLayout } from "@/components/DashboardLayout";
 import { apiFetch } from "@/lib/api";
+import { TeacherLayout } from "@/components/TeacherLayout";
+import { useLogout } from "@/hooks/use-auth";
 
 const emailSchema = z.object({
   email: z.string().email("Введіть коректний email"),
@@ -32,7 +32,6 @@ const passwordSchema = z.object({
   path: ["confirm_password"],
 });
 
-// HSL Helper for color conversion
 function rgbToHsl(r: number, g: number, b: number) {
   r /= 255; g /= 255; b /= 255;
   const max = Math.max(r, g, b), min = Math.min(r, g, b);
@@ -53,16 +52,15 @@ function rgbToHsl(r: number, g: number, b: number) {
   return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
 }
 
-export default function SettingsPage() {
-  const [isDark, setIsDark] = useState(false);
-  const [highlightColor, setHighlightColor] = useState("#00aaee");
+export default function TeacherSettings() {
+  const [isDark, setIsDark] = useState(() => localStorage.getItem("theme") === "dark");
+  const [highlightColor, setHighlightColor] = useState(() => localStorage.getItem("highlightColor") || "#7c3aed");
   const [emailOpen, setEmailOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
-  const { logout } = useLogout();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { toast } = useToast();
+  const { logout } = useLogout();
 
   const emailForm = useForm<z.infer<typeof emailSchema>>({
     resolver: zodResolver(emailSchema),
@@ -111,22 +109,6 @@ export default function SettingsPage() {
     },
   });
 
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-    const savedColor = localStorage.getItem("highlightColor") || "#00aaee";
-
-    if (savedTheme === "dark") {
-      setIsDark(true);
-      document.documentElement.classList.add("dark");
-    } else {
-      setIsDark(false);
-      document.documentElement.classList.remove("dark");
-    }
-
-    setHighlightColor(savedColor);
-    applyColor(savedColor);
-  }, []);
-
   const applyColor = (hex: string) => {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
@@ -135,7 +117,6 @@ export default function SettingsPage() {
     
     document.documentElement.style.setProperty('--primary', `${hsl.h} ${hsl.s}% ${hsl.l}%`);
     document.documentElement.style.setProperty('--ring', `${hsl.h} ${hsl.s}% ${hsl.l}%`);
-    document.documentElement.style.setProperty('--accent', `${hsl.h} ${hsl.s}% ${hsl.l}%`);
   };
 
   const toggleTheme = (checked: boolean) => {
@@ -149,13 +130,6 @@ export default function SettingsPage() {
     }
   };
 
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-    // Wait for animation
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    logout();
-  };
-
   const changeColor = (e: React.ChangeEvent<HTMLInputElement>) => {
     const color = e.target.value;
     setHighlightColor(color);
@@ -164,7 +138,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <DashboardLayout>
+    <TeacherLayout>
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -215,9 +189,6 @@ export default function SettingsPage() {
                     />
                     <span className="text-sm font-mono text-muted-foreground uppercase">{highlightColor}</span>
                   </div>
-                  <p className="text-sm text-muted-foreground pt-1">
-                    Виберіть будь-який колір для кнопок та активних елементів інтерфейсу.
-                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -401,7 +372,7 @@ export default function SettingsPage() {
               <Button 
                 variant="destructive" 
                 className="w-full" 
-                onClick={handleLogout}
+                onClick={logout}
               >
                 Вийти з акаунту
               </Button>
@@ -409,6 +380,6 @@ export default function SettingsPage() {
           </div>
         </motion.div>
       </div>
-    </DashboardLayout>
+    </TeacherLayout>
   );
 }

@@ -11,28 +11,24 @@ export default function Home() {
       description: "Перегляд та управління електронними відомостями з можливістю сортування за групами",
       icon: Table2,
       link: "/spreadsheet",
-      color: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
     },
     {
       title: "Користувачі",
       description: "Пошук, редагування та видалення користувачів системи",
       icon: Users,
       link: "/users",
-      color: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
     },
     {
       title: "Студенти",
       description: "Створення та управління записами студентів",
       icon: GraduationCap,
       link: "/students",
-      color: "bg-green-500/10 text-green-600 dark:text-green-400",
     },
     {
       title: "Викладачі",
       description: "Створення та управління записами викладачів",
       icon: BookOpen,
       link: "/teachers",
-      color: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
     },
   ];
 
@@ -57,11 +53,11 @@ export default function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: index * 0.1 }}
-            whileHover={{ scale: 1.02 }}
+            whileHover={{ scale: 1.02, y: -4 }}
           >
-            <Card className="h-full hover:shadow-lg transition-shadow duration-300">
+            <Card className="h-full hover:shadow-xl dark:hover:shadow-primary/5 transition-all duration-300 border-border/50 dark:border-border hover:border-primary/20">
               <CardHeader>
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 ${feature.color}`}>
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4 bg-primary/10 text-primary">
                   <feature.icon className="w-6 h-6" />
                 </div>
                 <CardTitle className="text-2xl">{feature.title}</CardTitle>

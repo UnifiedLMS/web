@@ -49,7 +49,7 @@ export default function Login() {
         transition={{ duration: 0.6, ease: "easeOut" }}
         className="w-full max-w-md px-4 z-10"
       >
-        <Card className="bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl overflow-hidden">
+        <Card className="bg-white/[0.07] backdrop-blur-xl border-white/[0.08] shadow-2xl shadow-black/40 overflow-hidden">
           <CardContent className="pt-10 pb-8 px-8">
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -57,15 +57,21 @@ export default function Login() {
               transition={{ duration: 0.2 }}
             >
               <div className="flex flex-col items-center mb-8">
-              <motion.img
-                src={unifiedLogo}
-                alt="Unified Logo"
-                className="h-20 w-auto mb-4 drop-shadow-lg"
-                whileHover={{ scale: 1.05 }}
-                transition={{ type: "spring", stiffness: 300 }}
-              />
-              <h1 className="text-3xl font-display font-bold text-white tracking-tight">Unified</h1>
-            </div>
+                <motion.div
+                  className="relative"
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                >
+                  <div className="absolute inset-0 bg-primary/30 blur-xl rounded-full scale-150" />
+                  <motion.img
+                    src={unifiedLogo}
+                    alt="Unified Logo"
+                    className="h-20 w-auto relative drop-shadow-lg"
+                  />
+                </motion.div>
+                <h1 className="text-3xl font-display font-bold text-white tracking-tight mt-4">Unified</h1>
+                <p className="text-white/40 text-sm mt-1">Система управління</p>
+              </div>
 
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
@@ -74,16 +80,16 @@ export default function Login() {
                   name="username"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-white/90">Код ЄДЕБО</FormLabel>
+                      <FormLabel className="text-white/80 text-sm font-medium">Код ЄДЕБО</FormLabel>
                       <FormControl>
                         <Input 
                           placeholder="Введіть код" 
                           {...field} 
                           autoComplete="username"
-                          className="bg-black/20 border-white/10 text-white placeholder:text-white/30 focus:bg-black/30 transition-all"
+                          className="bg-white/[0.05] border-white/[0.08] text-white placeholder:text-white/25 focus:bg-white/[0.08] focus:border-primary/50 transition-all h-11"
                         />
                       </FormControl>
-                      <FormMessage className="text-red-300" />
+                      <FormMessage className="text-red-400" />
                     </FormItem>
                   )}
                 />
@@ -93,7 +99,7 @@ export default function Login() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-white/90">Пароль</FormLabel>
+                      <FormLabel className="text-white/80 text-sm font-medium">Пароль</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Input
@@ -101,12 +107,12 @@ export default function Login() {
                             placeholder="Введіть пароль"
                             {...field}
                             autoComplete="current-password"
-                            className="bg-black/20 border-white/10 text-white placeholder:text-white/30 focus:bg-black/30 transition-all pr-10"
+                            className="bg-white/[0.05] border-white/[0.08] text-white placeholder:text-white/25 focus:bg-white/[0.08] focus:border-primary/50 transition-all pr-10 h-11"
                           />
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors focus:outline-none"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors focus:outline-none"
                             aria-label={showPassword ? "Сховати пароль" : "Показати пароль"}
                           >
                             {showPassword ? (
@@ -117,14 +123,14 @@ export default function Login() {
                           </button>
                         </div>
                       </FormControl>
-                      <FormMessage className="text-red-300" />
+                      <FormMessage className="text-red-400" />
                     </FormItem>
                   )}
                 />
 
                 <Button 
                   type="submit" 
-                  className="w-full bg-primary hover:bg-primary/90 text-white font-semibold h-12 mt-2 shadow-[0_0_20px_rgba(var(--primary),0.3)] hover:shadow-[0_0_30px_rgba(var(--primary),0.5)] transition-all duration-300"
+                  className="w-full bg-primary hover:bg-primary/90 text-white font-semibold h-12 mt-3 glow-primary transition-all duration-300"
                   disabled={loginMutation.isPending}
                 >
                   {loginMutation.isPending ? (
@@ -139,8 +145,8 @@ export default function Login() {
           </CardContent>
         </Card>
         
-        <p className="text-center text-white/30 text-xs mt-8">
-          &copy; {new Date().getFullYear()} Unified
+        <p className="text-center text-white/25 text-xs mt-8">
+          &copy; {new Date().getFullYear()} Unified · Система управління навчанням
         </p>
       </motion.div>
     </div>

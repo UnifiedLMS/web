@@ -3,7 +3,6 @@ import type { Server } from "http";
 import { api } from "@shared/routes";
 import { exec } from "child_process";
 import { promisify } from "util";
-import fetch from "node-fetch";
 
 const execAsync = promisify(exec);
 const EXTERNAL_API = "https://unifyapi.onrender.com";
@@ -37,12 +36,14 @@ export async function registerRoutes(
 
       const data = JSON.parse(stdout);
       
-      // Role-based access control (admins only)
-      if (data.role !== "admins") {
+      // Allow students, teachers, and admins to login
+      const allowedRoles = ["students", "teachers", "admins"];
+      if (!allowedRoles.includes(data.role)) {
         console.warn(`Access denied for user ${username}: Role is ${data.role}`);
-        return res.status(403).json({ message: "У вас немає прав адміністратора для входу в цей інтерфейс" });
+        return res.status(403).json({ message: "Невідома роль користувача" });
       }
-
+      
+      console.log(`[Auth] Login successful for ${username} with role: ${data.role}`);
       res.json(data);
 
     } catch (err) {
@@ -69,8 +70,9 @@ export async function registerRoutes(
 
       const data = JSON.parse(stdout);
       
-      // Role-based access control (admins only)
-      if (data.role !== "admins") {
+      // Allow students, teachers, and admins
+      const allowedRoles = ["students", "teachers", "admins"];
+      if (!allowedRoles.includes(data.role)) {
         return res.status(403).json({ message: "Недостатньо прав" });
       }
 
@@ -112,12 +114,18 @@ export async function registerRoutes(
       // Forward authorization header - Express lowercases header names, so check both
       const authHeader = req.headers.authorization || req.headers["authorization"] || req.headers["access-token"];
       if (authHeader) {
-        // Extract token from "Bearer <token>" or use as-is
-        const tokenValue = typeof authHeader === "string" 
-          ? (authHeader.startsWith("Bearer ") ? authHeader : `Bearer ${authHeader}`)
-          : authHeader;
-        headers["Authorization"] = tokenValue;
-        console.log(`[Proxy] Forwarding Authorization header`);
+        // Extract token from "Bearer <token>" format
+        let token = typeof authHeader === "string" ? authHeader : String(authHeader);
+        if (token.startsWith("Bearer ")) {
+          token = token.substring(7);
+        }
+        
+        // The external API uses access-token and token-type headers instead of Authorization
+        headers["access-token"] = token;
+        headers["token-type"] = "bearer";
+        // Also send standard Authorization header for compatibility
+        headers["Authorization"] = `Bearer ${token}`;
+        console.log(`[Proxy] Forwarding auth headers for ${url}`);
       } else {
         console.warn(`[Proxy] No Authorization header found in request`);
         // Log available headers for debugging
@@ -130,8 +138,30 @@ export async function registerRoutes(
       };
 
       // Include body for POST, PUT, PATCH
-      if (req.method !== "GET" && req.method !== "DELETE" && req.body) {
-        fetchOptions.body = JSON.stringify(req.body);
+      if (req.method !== "GET" && req.method !== "DELETE") {
+        let bodyString: string = "";
+        
+        // Always prefer rawBody to avoid double-stringification
+        if (req.rawBody) {
+          // Use the raw body as-is to preserve exact content
+          bodyString = Buffer.isBuffer(req.rawBody) 
+            ? req.rawBody.toString("utf-8")
+            : String(req.rawBody);
+          console.log(`[Proxy] Using rawBody:`, bodyString.substring(0, 200));
+        } else if (req.body !== undefined && req.body !== null) {
+          // Fallback: only stringify if body is not already a string
+          if (typeof req.body === "string") {
+            bodyString = req.body;
+            console.log(`[Proxy] Using req.body as string:`, bodyString.substring(0, 200));
+          } else {
+            bodyString = JSON.stringify(req.body);
+            console.log(`[Proxy] Using JSON.stringify(req.body):`, bodyString.substring(0, 200));
+          }
+        }
+        
+        if (bodyString) {
+          fetchOptions.body = bodyString;
+        }
       }
 
       const response = await fetch(url, fetchOptions);

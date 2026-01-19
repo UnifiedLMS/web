@@ -43,6 +43,7 @@ interface User {
 
 export default function Users() {
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("search");
   const [searchEdboId, setSearchEdboId] = useState("");
   const [searchedUser, setSearchedUser] = useState<User | null>(null);
   const [roleSearchQuery, setRoleSearchQuery] = useState("");
@@ -105,7 +106,7 @@ export default function Users() {
         console.log(`[Users] Updating user with EDBO ID: ${data.edboId}`, data);
         
         const result = await apiFetch(`/api/v1/users/${data.edboId}`, {
-          method: "PUT",
+          method: "PATCH",
           body: JSON.stringify({
             first_name: data.first_name,
             middle_name: data.middle_name,
@@ -144,11 +145,13 @@ export default function Users() {
     },
   });
 
-  const handleSearch = async () => {
-    if (!searchEdboId) return;
+  const handleSearch = async (edboIdOverride?: string) => {
+    const edboId = edboIdOverride ?? searchEdboId;
+    if (!edboId) return;
+    setSearchEdboId(edboId);
     setIsSearching(true);
     try {
-      const response = await apiFetch<User | User[]>(`/api/v1/users/${searchEdboId}`);
+      const response = await apiFetch<User | User[]>(`/api/v1/users/${edboId}`);
       
       // Handle both single user and array responses
       let user: User;
@@ -275,6 +278,11 @@ export default function Users() {
     }
   };
 
+  const handleRoleUserClick = (user: User) => {
+    setActiveTab("search");
+    handleSearch(String(user.edbo_id));
+  };
+
   const handleUpdate = (data: z.infer<typeof userSchema>) => {
     if (!searchEdboId) {
       toast({
@@ -307,7 +315,7 @@ export default function Users() {
               <CardDescription>Пошук, редагування та видалення користувачів</CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="search" className="w-full">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="search">Пошук за EDBO ID</TabsTrigger>
                   <TabsTrigger value="update">Оновлення</TabsTrigger>
@@ -499,7 +507,17 @@ export default function Users() {
                           className="p-4 hover:bg-muted/50 transition-colors"
                         >
                           <div className="grid grid-cols-2 gap-2 text-sm">
-                            <div><span className="text-muted-foreground">ПІБ:</span> {user.last_name} {user.first_name} {user.middle_name}</div>
+                            <div>
+                              <span className="text-muted-foreground">ПІБ:</span>{" "}
+                              <Button
+                                type="button"
+                                variant="link"
+                                className="h-auto p-0 text-left"
+                                onClick={() => handleRoleUserClick(user)}
+                              >
+                                {user.last_name} {user.first_name} {user.middle_name}
+                              </Button>
+                            </div>
                             <div><span className="text-muted-foreground">EDBO ID:</span> {user.edbo_id}</div>
                             <div><span className="text-muted-foreground">Дата народження:</span> {user.date_of_birth}</div>
                             <div><span className="text-muted-foreground">Роль:</span> {user.role}</div>

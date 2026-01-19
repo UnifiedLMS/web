@@ -14,6 +14,7 @@ declare module "http" {
 
 app.use(
   express.json({
+    strict: false,
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },

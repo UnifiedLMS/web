@@ -39,7 +39,7 @@ export function useLogin() {
           if (res.status === 401) {
             errorMessage = "Невірний логін або пароль";
           } else if (res.status === 403) {
-            errorMessage = errorData.message || "У вас немає прав адміністратора";
+            errorMessage = errorData.message || "Недостатньо прав для входу";
           }
           
           console.error(`[Auth] Login failed:`, { status: res.status, error: errorData, message: errorMessage });
@@ -61,7 +61,18 @@ export function useLogin() {
       localStorage.setItem("unified_token", data.access_token);
       localStorage.setItem("unified_user", JSON.stringify(data));
       queryClient.setQueryData(["/api/user"], data);
-      setLocation("/dashboard");
+      
+      // Redirect based on role
+      const role = data.role;
+      if (role === "students") {
+        setLocation("/student");
+      } else if (role === "teachers") {
+        setLocation("/teacher");
+      } else if (role === "admins") {
+        setLocation("/dashboard");
+      } else {
+        setLocation("/dashboard");
+      }
     },
   });
 }
@@ -106,6 +117,11 @@ export function useCheckToken() {
       }
     },
     onSuccess: (data) => {
+      // Update token if a new one is returned (token exchange)
+      if (data.access_token) {
+        console.log("[Auth] New token received, updating stored token");
+        localStorage.setItem("unified_token", data.access_token);
+      }
       localStorage.setItem("unified_user", JSON.stringify(data));
       queryClient.setQueryData(["/api/user"], data);
     }

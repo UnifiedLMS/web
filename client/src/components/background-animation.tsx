@@ -3,42 +3,104 @@ import { motion } from "framer-motion";
 export function BackgroundAnimation() {
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none -z-0">
-      <div className="absolute inset-0 bg-gradient-to-br from-[#0f172a] via-[#022c43] to-[#000814]" />
+      {/* Deep neutral gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a] via-[#121212] to-[#0a0a0a]" />
       
-      {/* Animated gradient orbs */}
+      {/* Animated gradient orbs - using primary color (accent from settings) */}
       <motion.div
         animate={{
           scale: [1, 1.2, 1],
-          opacity: [0.3, 0.5, 0.3],
+          opacity: [0.2, 0.35, 0.2],
           x: [-20, 20, -20],
           y: [-20, 20, -20],
-        }}
-        transition={{
-          duration: 8,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-        className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-primary/30 blur-[100px]"
-      />
-      
-      <motion.div
-        animate={{
-          scale: [1, 1.1, 1],
-          opacity: [0.2, 0.4, 0.2],
-          x: [20, -20, 20],
-          y: [20, -20, 20],
         }}
         transition={{
           duration: 10,
           repeat: Infinity,
           ease: "easeInOut",
-          delay: 1,
         }}
-        className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-primary/20 blur-[120px]"
+        className="absolute top-[-15%] left-[-10%] w-[55vw] h-[55vw] rounded-full bg-primary/30 blur-[120px]"
       />
       
-      {/* Grid overlay */}
-      <div className="absolute inset-0 bg-grid-white/[0.03] bg-[length:40px_40px]" />
+      {/* Secondary orb - also using primary color */}
+      <motion.div
+        animate={{
+          scale: [1, 1.15, 1],
+          opacity: [0.1, 0.25, 0.1],
+          x: [30, -30, 30],
+          y: [-15, 25, -15],
+        }}
+        transition={{
+          duration: 12,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: 2,
+        }}
+        className="absolute top-[30%] right-[-20%] w-[45vw] h-[45vw] rounded-full bg-primary/25 blur-[100px]"
+      />
+      
+      {/* Bottom orb - primary color with different opacity */}
+      <motion.div
+        animate={{
+          scale: [1, 1.1, 1],
+          opacity: [0.15, 0.3, 0.15],
+          x: [20, -20, 20],
+          y: [20, -20, 20],
+        }}
+        transition={{
+          duration: 14,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: 1,
+        }}
+        className="absolute bottom-[-10%] right-[10%] w-[50vw] h-[50vw] rounded-full bg-primary/20 blur-[110px]"
+      />
+
+      {/* Subtle floating particles */}
+      <motion.div
+        animate={{
+          y: [-10, 10, -10],
+          opacity: [0.2, 0.4, 0.2],
+        }}
+        transition={{
+          duration: 6,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+        className="absolute bottom-[20%] left-[15%] w-2 h-2 rounded-full bg-white/10"
+      />
+      <motion.div
+        animate={{
+          y: [10, -10, 10],
+          opacity: [0.15, 0.3, 0.15],
+        }}
+        transition={{
+          duration: 8,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: 1,
+        }}
+        className="absolute top-[25%] right-[20%] w-1.5 h-1.5 rounded-full bg-white/10"
+      />
+      <motion.div
+        animate={{
+          y: [-8, 8, -8],
+          opacity: [0.1, 0.25, 0.1],
+        }}
+        transition={{
+          duration: 7,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: 2,
+        }}
+        className="absolute top-[60%] left-[70%] w-1 h-1 rounded-full bg-white/10"
+      />
+      
+      {/* Subtle grid overlay */}
+      <div className="absolute inset-0 bg-grid-white/[0.015] bg-[length:50px_50px]" />
+      
+      {/* Vignette effect */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_0%,_rgba(0,0,0,0.5)_100%)]" />
     </div>
   );
 }
