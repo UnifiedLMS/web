@@ -11,7 +11,12 @@ import unifiedLogo from "@assets/unified_logo.png";
 // Pages
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
+import Home from "@/pages/Home";
 import Settings from "@/pages/Settings";
+import Spreadsheet from "@/pages/Spreadsheet";
+import Users from "@/pages/Users";
+import Students from "@/pages/Students";
+import Teachers from "@/pages/Teachers";
 import NotFound from "@/pages/not-found";
 
 // Entry Animation Component
@@ -63,6 +68,31 @@ function Router() {
         <Route path="/dashboard">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
             <Dashboard />
+          </motion.div>
+        </Route>
+        <Route path="/home">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <Dashboard />
+          </motion.div>
+        </Route>
+        <Route path="/spreadsheet">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <Spreadsheet />
+          </motion.div>
+        </Route>
+        <Route path="/users">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <Users />
+          </motion.div>
+        </Route>
+        <Route path="/students">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <Students />
+          </motion.div>
+        </Route>
+        <Route path="/teachers">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <Teachers />
           </motion.div>
         </Route>
         <Route path="/settings">

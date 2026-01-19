@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
-import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Moon, Sun } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import unifiedLogo from "@assets/unified_logo.png";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useLogout } from "@/hooks/use-auth";
+import { DashboardLayout } from "@/components/DashboardLayout";
 
 // HSL Helper for color conversion
 function rgbToHsl(r: number, g: number, b: number) {
@@ -89,32 +89,17 @@ export default function SettingsPage() {
   };
 
   return (
-    <AnimatePresence mode="wait">
-      {!isLoggingOut && (
+    <DashboardLayout>
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
         <motion.div 
-          key="settings-content"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0, y: 50 }}
-          transition={{ duration: 1 }}
-          className="min-h-screen bg-background p-4 md:p-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="space-y-8"
         >
-          <div className="max-w-2xl mx-auto space-y-8">
-            <div className="flex items-center gap-4">
-              <Link href="/dashboard">
-                <Button variant="ghost" size="icon" className="-ml-2">
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-              </Link>
               <h1 className="text-3xl font-display font-bold">Налаштування</h1>
-            </div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-8"
-            >
+          <div className="space-y-8">
               <Card>
                 <CardHeader>
                   <CardTitle>Зовнішній вигляд</CardTitle>
@@ -188,10 +173,9 @@ export default function SettingsPage() {
                   Вийти з акаунту
                 </Button>
               </div>
-            </motion.div>
           </div>
         </motion.div>
-      )}
-    </AnimatePresence>
+      </div>
+    </DashboardLayout>
   );
 }
