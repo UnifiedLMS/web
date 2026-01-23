@@ -123,10 +123,12 @@ export default function StudentLessons() {
 
   const getGradeColor = (grade: number, maxGrade: number) => {
     const percentage = (grade / maxGrade) * 100;
-    if (percentage >= 75) return "text-emerald-500";
-    if (percentage >= 50) return "text-amber-500";
-    return "text-red-500";
+    if (percentage >= 75) return "text-primary";
+    if (percentage >= 50) return "text-foreground";
+    return "text-muted-foreground";
   };
+
+  const normalizeDateKey = (value: string) => value.trim().replace(/\./g, "-");
 
   const getGradeTrend = (grades: Record<string, number>) => {
     const values = Object.values(grades);
@@ -144,7 +146,8 @@ export default function StudentLessons() {
   const isLoading = disciplinesLoading || gradesLoading;
   const getLessonLink = (date: string) => {
     if (!selectedSubject) return "";
-    return `/student/schedule?date=${encodeURIComponent(date)}&subject=${encodeURIComponent(selectedSubject.name)}`;
+    const normalizedDate = normalizeDateKey(date);
+    return `/student/schedule?date=${encodeURIComponent(normalizedDate)}&subject=${encodeURIComponent(selectedSubject.name)}`;
   };
 
   return (
@@ -153,7 +156,7 @@ export default function StudentLessons() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
         >
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-2">Мої предмети</h1>
@@ -229,7 +232,7 @@ export default function StudentLessons() {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.3, delay: index * 0.05 }}
+                      transition={{ duration: 0.3, delay: index * 0.05, ease: "easeInOut" }}
                     >
                       <Card
                         className="cursor-pointer hover:shadow-lg hover:border-primary/30 transition-all duration-200"
@@ -245,8 +248,8 @@ export default function StudentLessons() {
                               </div>
                             </div>
                             <div className="flex items-center gap-1">
-                              {trend === "up" && <TrendingUp className="w-4 h-4 text-emerald-500" />}
-                              {trend === "down" && <TrendingDown className="w-4 h-4 text-red-500" />}
+                              {trend === "up" && <TrendingUp className="w-4 h-4 text-primary" />}
+                              {trend === "down" && <TrendingDown className="w-4 h-4 text-foreground" />}
                               {trend === "neutral" && <Minus className="w-4 h-4 text-muted-foreground" />}
                             </div>
                           </div>

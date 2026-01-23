@@ -15,7 +15,7 @@ export function BackgroundAnimation() {
           y: [-20, 20, -20],
         }}
         transition={{
-          duration: 10,
+          duration: 0.5,
           repeat: Infinity,
           ease: "easeInOut",
         }}
@@ -31,10 +31,10 @@ export function BackgroundAnimation() {
           y: [-15, 25, -15],
         }}
         transition={{
-          duration: 12,
+          duration: 0.5,
           repeat: Infinity,
           ease: "easeInOut",
-          delay: 2,
+          delay: 0.4,
         }}
         className="absolute top-[30%] right-[-20%] w-[45vw] h-[45vw] rounded-full bg-primary/25 blur-[100px]"
       />
@@ -48,10 +48,10 @@ export function BackgroundAnimation() {
           y: [20, -20, 20],
         }}
         transition={{
-          duration: 14,
+          duration: 0.5,
           repeat: Infinity,
           ease: "easeInOut",
-          delay: 1,
+          delay: 0.3,
         }}
         className="absolute bottom-[-10%] right-[10%] w-[50vw] h-[50vw] rounded-full bg-primary/20 blur-[110px]"
       />
@@ -63,7 +63,7 @@ export function BackgroundAnimation() {
           opacity: [0.2, 0.4, 0.2],
         }}
         transition={{
-          duration: 6,
+          duration: 0.4,
           repeat: Infinity,
           ease: "easeInOut",
         }}
@@ -75,10 +75,10 @@ export function BackgroundAnimation() {
           opacity: [0.15, 0.3, 0.15],
         }}
         transition={{
-          duration: 8,
+          duration: 0.4,
           repeat: Infinity,
           ease: "easeInOut",
-          delay: 1,
+          delay: 0.3,
         }}
         className="absolute top-[25%] right-[20%] w-1.5 h-1.5 rounded-full bg-white/10"
       />
@@ -88,10 +88,10 @@ export function BackgroundAnimation() {
           opacity: [0.1, 0.25, 0.1],
         }}
         transition={{
-          duration: 7,
+          duration: 0.4,
           repeat: Infinity,
           ease: "easeInOut",
-          delay: 2,
+          delay: 0.4,
         }}
         className="absolute top-[60%] left-[70%] w-1 h-1 rounded-full bg-white/10"
       />

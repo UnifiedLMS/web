@@ -46,7 +46,7 @@ export default function Login() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
+        transition={{ duration: 0.4, ease: "easeInOut" }}
         className="w-full max-w-md px-4 z-10"
       >
         <Card className="bg-white/[0.07] backdrop-blur-xl border-white/[0.08] shadow-2xl shadow-black/40 overflow-hidden">
@@ -54,13 +54,13 @@ export default function Login() {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
             >
               <div className="flex flex-col items-center mb-8">
                 <motion.div
                   className="relative"
                   whileHover={{ scale: 1.05 }}
-                  transition={{ type: "spring", stiffness: 300 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
                 >
                   <div className="absolute inset-0 bg-primary/30 blur-xl rounded-full scale-150" />
                   <motion.img
@@ -89,7 +89,7 @@ export default function Login() {
                           className="bg-white/[0.05] border-white/[0.08] text-white placeholder:text-white/25 focus:bg-white/[0.08] focus:border-primary/50 transition-all h-11"
                         />
                       </FormControl>
-                      <FormMessage className="text-red-400" />
+                      <FormMessage className="text-primary" />
                     </FormItem>
                   )}
                 />
@@ -123,7 +123,7 @@ export default function Login() {
                           </button>
                         </div>
                       </FormControl>
-                      <FormMessage className="text-red-400" />
+                      <FormMessage className="text-primary" />
                     </FormItem>
                   )}
                 />

@@ -63,6 +63,10 @@ export default function StudentSchedule() {
     return trimmed;
   };
 
+  const normalizeDateKey = (value: string) => value.trim().replace(/\./g, "-");
+
+  const normalizeSubject = (value: string) => value.trim().replace(/\s+/g, " ").toLowerCase();
+
   const getLessonDateKey = (lesson: Lesson) => {
     let dateKey = lesson.date;
     if (lesson.event?.startAt) {
@@ -71,7 +75,7 @@ export default function StudentSchedule() {
         dateKey = format(parsed, "dd-MM-yyyy");
       }
     }
-    return dateKey;
+    return normalizeDateKey(dateKey);
   };
 
   // Group lessons by date
@@ -107,8 +111,11 @@ export default function StudentSchedule() {
     const subjectParam = params.get("subject");
     if (!dateParam && !subjectParam) return;
 
-    if (dateParam) {
-      const [day, month, year] = dateParam.split("-").map(Number);
+    const normalizedDateParam = dateParam ? normalizeDateKey(dateParam) : null;
+    const normalizedSubjectParam = subjectParam ? normalizeSubject(subjectParam) : null;
+
+    if (normalizedDateParam) {
+      const [day, month, year] = normalizedDateParam.split("-").map(Number);
       if (!Number.isNaN(day) && !Number.isNaN(month) && !Number.isNaN(year)) {
         const parsed = new Date(year, month - 1, day);
         if (!isNaN(parsed.getTime())) {
@@ -118,12 +125,10 @@ export default function StudentSchedule() {
       }
     }
 
-    if (subjectParam) {
-      const normalizedSubject = subjectParam.trim();
-      if (!normalizedSubject) return;
+    if (normalizedSubjectParam) {
       const matchedLesson = schedule.find(lesson => {
-        const dateMatches = dateParam ? getLessonDateKey(lesson) === dateParam : true;
-        return dateMatches && lesson.subject === normalizedSubject;
+        const dateMatches = normalizedDateParam ? getLessonDateKey(lesson) === normalizedDateParam : true;
+        return dateMatches && normalizeSubject(lesson.subject) === normalizedSubjectParam;
       });
       if (matchedLesson) {
         setSelectedLesson(matchedLesson);
@@ -144,6 +149,21 @@ export default function StudentSchedule() {
       return new Date(year, month - 1, day);
     });
   }, [lessonsByDate]);
+
+  const lessonDaySet = useMemo(() => {
+    return new Set(datesWithLessons.map(date => format(date, "yyyy-MM-dd")));
+  }, [datesWithLessons]);
+
+  const currentMonthDays = useMemo(() => {
+    return eachDayOfInterval({
+      start: startOfMonth(currentMonth),
+      end: endOfMonth(currentMonth),
+    });
+  }, [currentMonth]);
+
+  const daysWithoutLessons = useMemo(() => {
+    return currentMonthDays.filter(day => !lessonDaySet.has(format(day, "yyyy-MM-dd")));
+  }, [currentMonthDays, lessonDaySet]);
 
   const sortedLessonDates = useMemo(() => {
     return Object.keys(lessonsByDate).sort((a, b) => {
@@ -189,7 +209,7 @@ export default function StudentSchedule() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
         >
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -246,21 +266,27 @@ export default function StudentSchedule() {
                     locale={uk}
                     modifiers={{
                       hasLessons: datesWithLessons,
+                      noLessons: daysWithoutLessons,
                     }}
-                    modifiersStyles={{
-                      hasLessons: {
-                        fontWeight: "bold",
-                        textDecoration: "underline",
-                        textUnderlineOffset: "4px",
-                      },
+                    modifiersClassNames={{
+                      hasLessons: "bg-primary/10 text-primary font-semibold",
+                      noLessons: "bg-muted/40 text-muted-foreground",
                     }}
                     className="rounded-md border-0"
                   />
-                  <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-                    <div className="w-3 h-3 rounded-full bg-primary" />
-                    <span>Вибраний день</span>
-                    <div className="w-3 h-0.5 bg-foreground ml-4" />
-                    <span>Є заняття</span>
+                  <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-primary" />
+                      <span>Вибраний день</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-md bg-primary/10 border border-primary/30" />
+                      <span>Є заняття</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-md bg-muted/40 border border-border" />
+                      <span>Немає занять</span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -292,7 +318,7 @@ export default function StudentSchedule() {
                               initial={{ opacity: 0, x: -20 }}
                               animate={{ opacity: 1, x: 0 }}
                               exit={{ opacity: 0, x: 20 }}
-                              transition={{ duration: 0.2, delay: index * 0.05 }}
+                              transition={{ duration: 0.2, delay: index * 0.05, ease: "easeInOut" }}
                             >
                               {(() => {
                                 const homeworkText = normalizeHomework(lesson.homework);
@@ -336,8 +362,8 @@ export default function StudentSchedule() {
                                       </div>
                                       {homeworkText && (
                                         <div className="mt-2 flex items-center gap-1 text-sm">
-                                          <FileText className="w-3 h-3 text-amber-500" />
-                                          <span className="text-amber-600 dark:text-amber-400">Є домашнє завдання</span>
+                                          <FileText className="w-3 h-3 text-primary" />
+                                          <span className="text-primary">Є домашнє завдання</span>
                                         </div>
                                       )}
                                     </div>
@@ -391,7 +417,7 @@ export default function StudentSchedule() {
                                 key={`${dateKey}-${lesson.position}-${lesson.subject}`}
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                transition={{ duration: 0.2, delay: index * 0.03 }}
+                                transition={{ duration: 0.2, delay: index * 0.03, ease: "easeInOut" }}
                               >
                                 {(() => {
                                   const homeworkText = normalizeHomework(lesson.homework);
@@ -432,8 +458,8 @@ export default function StudentSchedule() {
                                         </div>
                                         {homeworkText && (
                                           <div className="mt-2 flex items-center gap-1 text-sm">
-                                            <FileText className="w-3 h-3 text-amber-500" />
-                                            <span className="text-amber-600 dark:text-amber-400">Є домашнє завдання</span>
+                                          <FileText className="w-3 h-3 text-primary" />
+                                          <span className="text-primary">Є домашнє завдання</span>
                                           </div>
                                         )}
                                       </div>
@@ -510,8 +536,8 @@ export default function StudentSchedule() {
                     const homeworkText = normalizeHomework(selectedLesson.homework);
                     if (!homeworkText) return null;
                     return (
-                    <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                      <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 mb-1">
+                    <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                      <div className="flex items-center gap-2 text-xs text-primary mb-1">
                         <FileText className="w-4 h-4" />
                         Домашнє завдання
                       </div>
@@ -522,11 +548,11 @@ export default function StudentSchedule() {
 
                   {/* Grade */}
                   {selectedLesson.grade && (
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                      <CheckCircle className="w-5 h-5 text-emerald-500" />
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                      <CheckCircle className="w-5 h-5 text-primary" />
                       <div>
-                        <div className="text-xs text-emerald-600 dark:text-emerald-400">Оцінка за заняття</div>
-                        <div className="font-bold text-lg text-emerald-600 dark:text-emerald-400">{selectedLesson.grade}</div>
+                        <div className="text-xs text-primary">Оцінка за заняття</div>
+                        <div className="font-bold text-lg text-primary">{selectedLesson.grade}</div>
                       </div>
                     </div>
                   )}

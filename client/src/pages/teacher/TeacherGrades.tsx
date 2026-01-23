@@ -252,7 +252,7 @@ export default function TeacherGrades() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
         >
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-2">Оцінювання</h1>
@@ -401,7 +401,7 @@ export default function TeacherGrades() {
                                 key={student.edbo_id}
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                transition={{ delay: index * 0.02 }}
+                                transition={{ delay: index * 0.02, duration: 0.2, ease: "easeInOut" }}
                                 className="hover:bg-muted/30"
                               >
                                 <td className="sticky left-0 z-10 bg-background p-3 border font-medium">
@@ -411,9 +411,9 @@ export default function TeacherGrades() {
                                   const grade = studentGrades[date];
                                   const percentage = grade ? (grade / maxGrade) * 100 : 0;
                                   const colorClass = grade
-                                    ? percentage >= 75 ? "text-emerald-600 dark:text-emerald-400"
-                                    : percentage >= 50 ? "text-amber-600 dark:text-amber-400"
-                                    : "text-red-600 dark:text-red-400"
+                                    ? percentage >= 75 ? "text-primary"
+                                    : percentage >= 50 ? "text-foreground"
+                                    : "text-muted-foreground"
                                     : "text-muted-foreground";
                                   const cellKey = `${student.edbo_id}-${date}`;
                                   const displayValue = editingGrades[cellKey] ?? (grade ? String(grade) : "");

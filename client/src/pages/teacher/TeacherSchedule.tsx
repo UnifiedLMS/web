@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { TeacherLayout } from "@/components/TeacherLayout";
-import { format, addMonths, subMonths, isToday } from "date-fns";
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isToday } from "date-fns";
 import { uk } from "date-fns/locale";
 
 interface LessonEvent {
@@ -148,6 +148,21 @@ export default function TeacherSchedule() {
     });
   }, [lessonsByDate]);
 
+  const lessonDaySet = useMemo(() => {
+    return new Set(datesWithLessons.map(date => format(date, "yyyy-MM-dd")));
+  }, [datesWithLessons]);
+
+  const currentMonthDays = useMemo(() => {
+    return eachDayOfInterval({
+      start: startOfMonth(currentMonth),
+      end: endOfMonth(currentMonth),
+    });
+  }, [currentMonth]);
+
+  const daysWithoutLessons = useMemo(() => {
+    return currentMonthDays.filter(day => !lessonDaySet.has(format(day, "yyyy-MM-dd")));
+  }, [currentMonthDays, lessonDaySet]);
+
   const sortedLessonDates = useMemo(() => {
     return Object.keys(lessonsByDate).sort((a, b) => {
       const [dayA, monthA, yearA] = a.split("-").map(Number);
@@ -203,7 +218,7 @@ export default function TeacherSchedule() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
         >
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -260,16 +275,28 @@ export default function TeacherSchedule() {
                     locale={uk}
                     modifiers={{
                       hasLessons: datesWithLessons,
+                      noLessons: daysWithoutLessons,
                     }}
-                    modifiersStyles={{
-                      hasLessons: {
-                        fontWeight: "bold",
-                        textDecoration: "underline",
-                        textUnderlineOffset: "4px",
-                      },
+                    modifiersClassNames={{
+                      hasLessons: "bg-primary/10 text-primary font-semibold",
+                      noLessons: "bg-muted/40 text-muted-foreground",
                     }}
                     className="rounded-md border-0"
                   />
+                  <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-primary" />
+                      <span>Вибраний день</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-md bg-primary/10 border border-primary/30" />
+                      <span>Є заняття</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-md bg-muted/40 border border-border" />
+                      <span>Немає занять</span>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -300,7 +327,7 @@ export default function TeacherSchedule() {
                               initial={{ opacity: 0, x: -20 }}
                               animate={{ opacity: 1, x: 0 }}
                               exit={{ opacity: 0, x: 20 }}
-                              transition={{ duration: 0.2, delay: index * 0.05 }}
+                              transition={{ duration: 0.2, delay: index * 0.05, ease: "easeInOut" }}
                             >
                               {(() => {
                                 const homeworkText = normalizeHomework(lesson.homework);
@@ -350,8 +377,8 @@ export default function TeacherSchedule() {
                                       )}
                                       {homeworkText && (
                                         <div className="mt-1 flex items-start gap-1 text-sm">
-                                          <FileText className="w-3 h-3 mt-0.5 text-amber-500" />
-                                          <span className="text-amber-600 dark:text-amber-400">{homeworkText}</span>
+                                          <FileText className="w-3 h-3 mt-0.5 text-primary" />
+                                          <span className="text-primary">{homeworkText}</span>
                                         </div>
                                       )}
                                     </div>
@@ -405,7 +432,7 @@ export default function TeacherSchedule() {
                                 key={`${dateKey}-${lesson.position}-${lesson.subject}-${lesson.group.en}`}
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                transition={{ duration: 0.2, delay: index * 0.03 }}
+                                transition={{ duration: 0.2, delay: index * 0.03, ease: "easeInOut" }}
                               >
                                 {(() => {
                                   const homeworkText = normalizeHomework(lesson.homework);
@@ -452,8 +479,8 @@ export default function TeacherSchedule() {
                                         )}
                                         {homeworkText && (
                                           <div className="mt-1 flex items-start gap-1 text-sm">
-                                            <FileText className="w-3 h-3 mt-0.5 text-amber-500" />
-                                            <span className="text-amber-600 dark:text-amber-400">{homeworkText}</span>
+                                            <FileText className="w-3 h-3 mt-0.5 text-primary" />
+                                            <span className="text-primary">{homeworkText}</span>
                                           </div>
                                         )}
                                       </div>

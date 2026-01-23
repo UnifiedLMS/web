@@ -54,7 +54,7 @@ function rgbToHsl(r: number, g: number, b: number) {
 
 export default function TeacherSettings() {
   const [isDark, setIsDark] = useState(() => localStorage.getItem("theme") === "dark");
-  const [highlightColor, setHighlightColor] = useState(() => localStorage.getItem("highlightColor") || "#7c3aed");
+  const [highlightColor, setHighlightColor] = useState(() => localStorage.getItem("highlightColor") || "#00aaee");
   const [emailOpen, setEmailOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -117,6 +117,7 @@ export default function TeacherSettings() {
     
     document.documentElement.style.setProperty('--primary', `${hsl.h} ${hsl.s}% ${hsl.l}%`);
     document.documentElement.style.setProperty('--ring', `${hsl.h} ${hsl.s}% ${hsl.l}%`);
+    document.documentElement.style.setProperty('--accent', `${hsl.h} ${hsl.s}% ${hsl.l}%`);
   };
 
   const toggleTheme = (checked: boolean) => {
@@ -143,7 +144,7 @@ export default function TeacherSettings() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
           className="space-y-8"
         >
           <h1 className="text-3xl font-display font-bold">Налаштування</h1>
@@ -206,7 +207,7 @@ export default function TeacherSettings() {
                           <CardDescription>Оновіть вашу адресу електронної пошти</CardDescription>
                         </div>
                       </div>
-                      <ChevronDown className={`w-5 h-5 transition-transform ${emailOpen ? "rotate-180" : ""}`} />
+                      <ChevronDown className={`w-5 h-5 transition-transform duration-200 ease-in-out ${emailOpen ? "rotate-180" : ""}`} />
                     </div>
                   </CardHeader>
                 </CollapsibleTrigger>
@@ -264,7 +265,7 @@ export default function TeacherSettings() {
                           <CardDescription>Оновіть ваш пароль для входу</CardDescription>
                         </div>
                       </div>
-                      <ChevronDown className={`w-5 h-5 transition-transform ${passwordOpen ? "rotate-180" : ""}`} />
+                      <ChevronDown className={`w-5 h-5 transition-transform duration-200 ease-in-out ${passwordOpen ? "rotate-180" : ""}`} />
                     </div>
                   </CardHeader>
                 </CollapsibleTrigger>

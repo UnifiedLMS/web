@@ -307,7 +307,7 @@ export default function Users() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
         >
           <Card>
             <CardHeader>
@@ -344,6 +344,7 @@ export default function Users() {
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, ease: "easeInOut" }}
                       className="border rounded-lg p-4 space-y-2"
                     >
                       <h3 className="font-semibold">Інформація про користувача</h3>
@@ -504,6 +505,7 @@ export default function Users() {
                           key={user.edbo_id}
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.2, ease: "easeInOut" }}
                           className="p-4 hover:bg-muted/50 transition-colors"
                         >
                           <div className="grid grid-cols-2 gap-2 text-sm">
@@ -518,7 +520,17 @@ export default function Users() {
                                 {user.last_name} {user.first_name} {user.middle_name}
                               </Button>
                             </div>
-                            <div><span className="text-muted-foreground">EDBO ID:</span> {user.edbo_id}</div>
+                            <div>
+                              <span className="text-muted-foreground">EDBO ID:</span>{" "}
+                              <Button
+                                type="button"
+                                variant="link"
+                                className="h-auto p-0 text-left"
+                                onClick={() => handleRoleUserClick(user)}
+                              >
+                                {user.edbo_id}
+                              </Button>
+                            </div>
                             <div><span className="text-muted-foreground">Дата народження:</span> {user.date_of_birth}</div>
                             <div><span className="text-muted-foreground">Роль:</span> {user.role}</div>
                           </div>

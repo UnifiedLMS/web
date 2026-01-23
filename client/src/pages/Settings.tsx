@@ -152,7 +152,7 @@ export default function SettingsPage() {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     // Wait for animation
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 500));
     logout();
   };
 
@@ -169,7 +169,7 @@ export default function SettingsPage() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
           className="space-y-8"
         >
           <h1 className="text-3xl font-display font-bold">Налаштування</h1>
@@ -235,7 +235,7 @@ export default function SettingsPage() {
                           <CardDescription>Оновіть вашу адресу електронної пошти</CardDescription>
                         </div>
                       </div>
-                      <ChevronDown className={`w-5 h-5 transition-transform ${emailOpen ? "rotate-180" : ""}`} />
+                      <ChevronDown className={`w-5 h-5 transition-transform duration-200 ease-in-out ${emailOpen ? "rotate-180" : ""}`} />
                     </div>
                   </CardHeader>
                 </CollapsibleTrigger>
@@ -293,7 +293,7 @@ export default function SettingsPage() {
                           <CardDescription>Оновіть ваш пароль для входу</CardDescription>
                         </div>
                       </div>
-                      <ChevronDown className={`w-5 h-5 transition-transform ${passwordOpen ? "rotate-180" : ""}`} />
+                      <ChevronDown className={`w-5 h-5 transition-transform duration-200 ease-in-out ${passwordOpen ? "rotate-180" : ""}`} />
                     </div>
                   </CardHeader>
                 </CollapsibleTrigger>

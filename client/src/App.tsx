@@ -38,7 +38,7 @@ function EntryScreen({ onComplete }: { onComplete: () => void }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: 0.4, ease: "easeInOut" }}
       className="fixed inset-0 z-[100] flex items-center justify-center bg-gradient-to-br from-[#0a0a0a] via-[#111111] to-[#0a0a0a] text-white"
     >
       {/* Subtle background glow - uses primary/accent color */}
@@ -51,7 +51,7 @@ function EntryScreen({ onComplete }: { onComplete: () => void }) {
           <motion.div
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1.5, opacity: 0.25 }}
-            transition={{ duration: 1.5, ease: "easeOut" }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
             className="absolute inset-0 bg-primary/30 blur-2xl rounded-full"
           />
           <motion.img
@@ -59,14 +59,14 @@ function EntryScreen({ onComplete }: { onComplete: () => void }) {
             alt="Logo"
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1.2, opacity: 1 }}
-            transition={{ duration: 1.5, ease: "easeOut" }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
             className="w-24 h-auto relative"
           />
         </motion.div>
         <motion.h1
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.5, duration: 0.8 }}
+          transition={{ delay: 0.2, duration: 0.4, ease: "easeInOut" }}
           className="text-4xl font-display font-bold tracking-tight mt-6"
         >
           Unified
@@ -74,7 +74,7 @@ function EntryScreen({ onComplete }: { onComplete: () => void }) {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1, duration: 0.5 }}
+          transition={{ delay: 0.3, duration: 0.4, ease: "easeInOut" }}
           className="mt-8"
         >
           <div className="flex gap-1">
@@ -82,7 +82,7 @@ function EntryScreen({ onComplete }: { onComplete: () => void }) {
               <motion.div
                 key={i}
                 animate={{ opacity: [0.3, 1, 0.3] }}
-                transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+                transition={{ duration: 0.4, repeat: Infinity, delay: i * 0.2, ease: "easeInOut" }}
                 className="w-2 h-2 bg-primary rounded-full"
               />
             ))}
@@ -98,97 +98,97 @@ function Router() {
     <AnimatePresence mode="wait">
       <Switch>
         <Route path="/">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: "easeInOut" }}>
             <Login />
           </motion.div>
         </Route>
         <Route path="/login">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: "easeInOut" }}>
             <Login />
           </motion.div>
         </Route>
         <Route path="/dashboard">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: "easeInOut" }}>
             <Dashboard />
           </motion.div>
         </Route>
         <Route path="/home">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: "easeInOut" }}>
             <Dashboard />
           </motion.div>
         </Route>
         <Route path="/spreadsheet">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: "easeInOut" }}>
             <Spreadsheet />
           </motion.div>
         </Route>
         <Route path="/users">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: "easeInOut" }}>
             <Users />
           </motion.div>
         </Route>
         <Route path="/students">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: "easeInOut" }}>
             <Students />
           </motion.div>
         </Route>
         <Route path="/teachers">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: "easeInOut" }}>
             <Teachers />
           </motion.div>
         </Route>
         <Route path="/settings">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: "easeInOut" }}>
             <Settings />
           </motion.div>
         </Route>
         
         {/* Student Routes */}
         <Route path="/student">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: "easeInOut" }}>
             <StudentHome />
           </motion.div>
         </Route>
         <Route path="/student/lessons">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: "easeInOut" }}>
             <StudentLessons />
           </motion.div>
         </Route>
         <Route path="/student/schedule">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: "easeInOut" }}>
             <StudentSchedule />
           </motion.div>
         </Route>
         <Route path="/student/settings">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: "easeInOut" }}>
             <StudentSettings />
           </motion.div>
         </Route>
         
         {/* Teacher Routes */}
         <Route path="/teacher">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: "easeInOut" }}>
             <TeacherHome />
           </motion.div>
         </Route>
         <Route path="/teacher/schedule">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: "easeInOut" }}>
             <TeacherSchedule />
           </motion.div>
         </Route>
         <Route path="/teacher/grades">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: "easeInOut" }}>
             <TeacherGrades />
           </motion.div>
         </Route>
         <Route path="/teacher/settings">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: "easeInOut" }}>
             <TeacherSettings />
           </motion.div>
         </Route>
         
         <Route>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: "easeInOut" }}>
             <NotFound />
           </motion.div>
         </Route>
@@ -259,7 +259,7 @@ function AppContent() {
     };
 
     // 3. Coordinate Animation + Auth Check
-    const minAnimationTime = 2000; // 2 seconds
+      const minAnimationTime = 500; // 0.5 seconds
     const startTime = Date.now();
 
     const runSequence = async () => {
@@ -299,7 +299,7 @@ function AppContent() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.4, ease: "easeInOut" }}
         >
           <Router />
         </motion.div>

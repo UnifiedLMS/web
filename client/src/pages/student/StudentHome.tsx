@@ -33,7 +33,7 @@ export default function StudentHome() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.4, ease: "easeInOut" }}
           className="mb-8"
         >
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Вітаємо!</h1>
@@ -48,8 +48,8 @@ export default function StudentHome() {
               key={feature.link}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              whileHover={{ scale: 1.02, y: -4 }}
+              transition={{ duration: 0.4, delay: index * 0.1, ease: "easeInOut" }}
+              whileHover={{ scale: 1.02, y: -4, transition: { duration: 0.3, ease: "easeInOut" } }}
             >
               <Card className="h-full hover:shadow-xl dark:hover:shadow-primary/5 transition-all duration-300 border-border/50 dark:border-border hover:border-primary/20">
                 <CardHeader>
