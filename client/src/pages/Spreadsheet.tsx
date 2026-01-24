@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
-import { Search, ArrowUpDown, Loader2 } from "lucide-react";
+import { Search, ArrowUpDown, Loader2, Download, Upload } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { downloadWorksheet, readWorksheetFromFile, type WorksheetRows } from "@/lib/excel";
 
 // API response structure for a single group entry
 interface GroupEntry {
@@ -62,7 +63,16 @@ export default function Spreadsheet() {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [importedGrades, setImportedGrades] = useState<Record<number, Record<string, number | null>>>({});
+  const [isImporting, setIsImporting] = useState(false);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const TEMPLATE_NAME = "UnifiedWeb Admin Spreadsheet";
+
+  useEffect(() => {
+    setImportedGrades({});
+  }, [selectedGroup]);
 
   // Fetch groups
   const { data: groups = [], isLoading: groupsLoading, error: groupsError, refetch: refetchGroups } = useQuery<Group[]>({
@@ -182,6 +192,157 @@ export default function Spreadsheet() {
     return `${student.last_name} ${student.first_name} ${student.middle_name}`;
   };
 
+  const handleExport = useCallback(() => {
+    if (!selectedGroupData) {
+      toast({
+        variant: "destructive",
+        title: "Помилка",
+        description: "Оберіть групу для експорту",
+      });
+      return;
+    }
+
+    if (disciplines.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Помилка",
+        description: "Немає дисциплін для експорту",
+      });
+      return;
+    }
+
+    const headerRow = ["EDBO ID", "Student", ...disciplines];
+    const rows: WorksheetRows = [
+      ["Template", TEMPLATE_NAME],
+      ["Group", selectedGroupData.en],
+      ["Disciplines", disciplines.join(", ")],
+      headerRow,
+      ...sortedStudents.map((student) => [
+        student.edbo_id,
+        getFullName(student),
+        ...disciplines.map((discipline) => {
+          const value = importedGrades[student.edbo_id]?.[discipline];
+          return value ?? "";
+        }),
+      ]),
+    ];
+
+    const safeGroup = selectedGroupData.en.replace(/[\\/:*?"<>|]/g, "-");
+    downloadWorksheet(rows, `Admin_Spreadsheet_${safeGroup}.xlsx`, "Spreadsheet");
+  }, [disciplines, getFullName, importedGrades, selectedGroupData, sortedStudents, toast]);
+
+  const handleImport = useCallback(async (file: File) => {
+    if (!selectedGroupData) {
+      toast({
+        variant: "destructive",
+        title: "Помилка",
+        description: "Оберіть групу перед імпортом",
+      });
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const rows = await readWorksheetFromFile(file);
+      if (rows.length < 4) {
+        throw new Error("Файл не відповідає шаблону");
+      }
+
+      if (rows[0]?.[0] !== "Template" || rows[0]?.[1] !== TEMPLATE_NAME) {
+        throw new Error("Неправильний шаблон файлу");
+      }
+
+      if (rows[1]?.[0] !== "Group" || String(rows[1]?.[1] ?? "") !== selectedGroupData.en) {
+        throw new Error("Файл не відповідає обраній групі");
+      }
+
+      if (rows[2]?.[0] !== "Disciplines") {
+        throw new Error("Неправильний блок дисциплін у шаблоні");
+      }
+
+      const templateDisciplines = String(rows[2]?.[1] ?? "")
+        .split(",")
+        .map((d) => d.trim())
+        .filter(Boolean);
+
+      if (templateDisciplines.length !== disciplines.length ||
+        templateDisciplines.some((disc, index) => disc !== disciplines[index])
+      ) {
+        throw new Error("Список дисциплін у файлі не відповідає поточній групі");
+      }
+
+      const headerRow = rows[3];
+      if (headerRow?.[0] !== "EDBO ID" || headerRow?.[1] !== "Student") {
+        throw new Error("Неправильні заголовки таблиці");
+      }
+
+      const headerDisciplines = headerRow.slice(2).map((cell) => String(cell ?? "").trim()).filter(Boolean);
+      if (headerDisciplines.length !== disciplines.length ||
+        headerDisciplines.some((disc, index) => disc !== disciplines[index])
+      ) {
+        throw new Error("Колонки дисциплін не відповідають шаблону");
+      }
+
+      const studentMap = new Map(students.map((student) => [student.edbo_id, student]));
+      const nextGrades: Record<number, Record<string, number | null>> = {};
+
+      for (let rowIndex = 4; rowIndex < rows.length; rowIndex += 1) {
+        const row = rows[rowIndex];
+        if (!row || row.length === 0) continue;
+
+        const edboValue = row[0];
+        const edboId = Number(edboValue);
+        if (!edboId) {
+          continue;
+        }
+
+        if (!studentMap.has(edboId)) {
+          throw new Error(`EDBO ID ${edboId} не знайдено у поточній групі`);
+        }
+
+        const gradeRow: Record<string, number | null> = {};
+        disciplines.forEach((discipline, index) => {
+          const cellValue = row[index + 2];
+          if (cellValue === "" || cellValue === null || cellValue === undefined) {
+            return;
+          }
+
+          const numericValue = Number(cellValue);
+          if (!Number.isFinite(numericValue)) {
+            throw new Error(`Невалідне значення для ${discipline} (EDBO ID ${edboId})`);
+          }
+
+          gradeRow[discipline] = numericValue;
+        });
+
+        if (Object.keys(gradeRow).length > 0) {
+          nextGrades[edboId] = gradeRow;
+        }
+      }
+
+      setImportedGrades(nextGrades);
+      toast({
+        title: "Успіх",
+        description: "Дані успішно імпортовано",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Помилка імпорту",
+        description: error?.message || "Не вдалося імпортувати файл",
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  }, [disciplines, selectedGroupData, students, toast]);
+
+  const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await handleImport(file);
+    event.target.value = "";
+  }, [handleImport]);
+
   return (
     <DashboardLayout>
       <div className="container mx-auto px-4 py-8 max-w-[95vw]">
@@ -283,6 +444,29 @@ export default function Spreadsheet() {
                     </div>
                   )}
 
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={handleExport} disabled={!selectedGroupData}>
+                      <Download className="w-4 h-4 mr-2" />
+                      Експорт Excel
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={!selectedGroupData || isImporting}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      {isImporting ? "Імпорт..." : "Імпорт Excel"}
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".xlsx,.xls"
+                      className="hidden"
+                      onChange={handleFileSelect}
+                    />
+                  </div>
+
                   <div className="border rounded-lg overflow-x-auto bg-card">
                     {studentsLoading ? (
                       <div className="flex flex-col items-center justify-center py-16 gap-3">
@@ -324,15 +508,20 @@ export default function Spreadsheet() {
                                 <TableCell className="font-medium border-r border-border sticky left-0 bg-card z-10">
                                   {getFullName(student)}
                                 </TableCell>
-                                {disciplines.map((discipline, disciplineIdx) => (
+                                {disciplines.map((discipline, disciplineIdx) => {
+                                  const importedValue = importedGrades[student.edbo_id]?.[discipline];
+                                  return (
                                   <TableCell 
                                     key={`cell-${student.edbo_id}-${disciplineIdx}`} 
                                     className="text-center hover:bg-primary/5 transition-colors cursor-pointer"
                                   >
-                                    {/* Empty cells for data entry */}
-                                    <span className="text-muted-foreground/30">—</span>
+                                    {importedValue === null || importedValue === undefined ? (
+                                      <span className="text-muted-foreground/30">—</span>
+                                    ) : (
+                                      <span className="font-medium">{importedValue}</span>
+                                    )}
                                   </TableCell>
-                                ))}
+                                )})}
                               </TableRow>
                             ))
                           )}

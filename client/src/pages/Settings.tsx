@@ -78,7 +78,12 @@ export default function SettingsPage() {
     mutationFn: async (data: z.infer<typeof emailSchema>) => {
       return apiFetch("/api/v1/user/email", {
         method: "PATCH",
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          email: {
+            address: data.email,
+            password: data.password,
+          },
+        }),
       });
     },
     onSuccess: () => {

@@ -36,13 +36,6 @@ export async function registerRoutes(
 
       const data = JSON.parse(stdout);
       
-      // Allow students, teachers, and admins to login
-      const allowedRoles = ["students", "teachers", "admins"];
-      if (!allowedRoles.includes(data.role)) {
-        console.warn(`Access denied for user ${username}: Role is ${data.role}`);
-        return res.status(403).json({ message: "Невідома роль користувача" });
-      }
-      
       console.log(`[Auth] Login successful for ${username} with role: ${data.role}`);
       res.json(data);
 
@@ -52,29 +45,116 @@ export async function registerRoutes(
     }
   });
 
+  // Google OAuth Login Redirect
+  app.get(api.auth.loginGoogle.path, (req, res) => {
+    const origin = `${req.protocol}://${req.get("host")}`;
+    const callbackUrl = `${origin}/api/proxy/api/v1/auth/google/callback`;
+    const redirectUrl = new URL(`${EXTERNAL_API}/api/v1/auth/login/google`);
+    redirectUrl.searchParams.set("redirect_uri", callbackUrl);
+    redirectUrl.searchParams.set("redirect_url", callbackUrl);
+    redirectUrl.searchParams.set("redirect", callbackUrl);
+    redirectUrl.searchParams.set("return_to", callbackUrl);
+    redirectUrl.searchParams.set("return_url", callbackUrl);
+    redirectUrl.searchParams.set("callback", callbackUrl);
+    redirectUrl.searchParams.set("success_redirect", callbackUrl);
+    redirectUrl.searchParams.set("failure_redirect", `${callbackUrl}?oauth_error=1`);
+    console.log(`[Auth] Redirecting to Google OAuth: ${redirectUrl.toString()}`);
+    res.redirect(redirectUrl.toString());
+  });
+
+  // Google OAuth Callback -> Exchange code, then redirect to login with token
+  app.get("/api/proxy/api/v1/auth/google/callback", async (req, res) => {
+    try {
+      const origin = `${req.protocol}://${req.get("host")}`;
+      const queryString = req.url.includes("?") ? req.url.substring(req.url.indexOf("?")) : "";
+      const url = `${EXTERNAL_API}/api/v1/auth/google${queryString}`;
+      console.log(`[Auth] Exchanging Google code: ${url}`);
+
+      const response = await fetch(url);
+      const text = await response.text();
+
+      if (!response.ok) {
+        console.error("[Auth] Google exchange failed:", text);
+        return res.status(response.status).send(text);
+      }
+
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch (parseError) {
+        console.error("[Auth] Failed to parse Google exchange response:", parseError);
+        return res.status(500).send(text);
+      }
+
+      const token = data?.access_token;
+      if (!token) {
+        console.error("[Auth] Missing access token in response:", data);
+        return res.status(500).json({ message: "Token missing in Google response" });
+      }
+
+      const redirectTo = `${origin}/login?access_token=${encodeURIComponent(token)}`;
+      console.log(`[Auth] Redirecting to app login: ${redirectTo}`);
+      res.redirect(redirectTo);
+    } catch (err: any) {
+      console.error("[Auth] Google callback error:", err);
+      res.status(500).json({ message: err.message || "Internal Server Error" });
+    }
+  });
+
+  // Google OAuth Code Exchange (used by finish page)
+  app.get("/api/proxy/api/v1/auth/google/exchange", async (req, res) => {
+    try {
+      const code = typeof req.query.code === "string" ? req.query.code : "";
+      const state = typeof req.query.state === "string" ? req.query.state : "";
+
+      if (!code) {
+        return res.status(400).json({ message: "Missing code" });
+      }
+
+      const url = new URL(`${EXTERNAL_API}/api/v1/auth/google`);
+      url.searchParams.set("code", code);
+      if (state) {
+        url.searchParams.set("state", state);
+      }
+
+      console.log(`[Auth] Exchanging Google code via API: ${url.toString()}`);
+      const response = await fetch(url.toString());
+      const text = await response.text();
+
+      res.status(response.status);
+      try {
+        const json = JSON.parse(text);
+        res.json(json);
+      } catch {
+        res.send(text);
+      }
+    } catch (err: any) {
+      console.error("[Auth] Google exchange error:", err);
+      res.status(500).json({ message: err.message || "Internal Server Error" });
+    }
+  });
+
   // Proxy Token Check
   app.post(api.auth.checkToken.path, async (req, res) => {
     try {
       const { token } = api.auth.checkToken.input.parse(req.body);
 
-      // Using curl for token check proxying
-      const curlCommand = `curl -X POST https://unifyapi.onrender.com/api/v1/auth/token \
+      // Using curl for token check proxying (-s for silent mode)
+      const curlCommand = `curl -s -X POST https://unifyapi.onrender.com/api/v1/auth/token \
         -H "access-token: ${token}" \
         -H "token-type: bearer"`;
 
+      console.log("[Auth] Checking token...");
       const { stdout, stderr } = await execAsync(curlCommand);
+      console.log("[Auth] Token check stdout:", stdout);
+      if (stderr) console.log("[Auth] Token check stderr:", stderr);
 
       if (stderr && !stdout) {
          return res.status(401).json({ message: "Token invalid" });
       }
 
       const data = JSON.parse(stdout);
-      
-      // Allow students, teachers, and admins
-      const allowedRoles = ["students", "teachers", "admins"];
-      if (!allowedRoles.includes(data.role)) {
-        return res.status(403).json({ message: "Недостатньо прав" });
-      }
+      console.log("[Auth] Token check data:", data);
 
       res.json(data);
 
@@ -88,7 +168,13 @@ export async function registerRoutes(
   // Use a regex pattern to match all /api/proxy routes except auth routes
   app.all(/^\/api\/proxy\/.+/, async (req, res, next) => {
     // Skip specific auth routes - they should have been handled above, but check anyway
-    if (req.path.startsWith("/api/proxy/auth/login") || req.path.startsWith("/api/proxy/auth/token")) {
+    if (
+      req.path.startsWith("/api/proxy/auth/login") ||
+      req.path.startsWith("/api/proxy/auth/token") ||
+      req.path.startsWith("/api/proxy/api/v1/auth/login/google") ||
+      req.path.startsWith("/api/proxy/api/v1/auth/google/callback") ||
+      req.path.startsWith("/api/proxy/api/v1/auth/google/exchange")
+    ) {
       return next();
     }
     

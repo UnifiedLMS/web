@@ -273,9 +273,9 @@ function AppContent() {
         if (authResult.valid) {
           // Redirect based on role
           const role = authResult.role;
-          if (role === "students") {
+          if (role === "students" || role === "student") {
             setLocation("/student");
-          } else if (role === "teachers") {
+          } else if (role === "teachers" || role === "teacher") {
             setLocation("/teacher");
           } else {
             setLocation("/dashboard");

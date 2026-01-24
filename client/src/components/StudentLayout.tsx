@@ -37,10 +37,10 @@ export function StudentLayout({ children }: StudentLayoutProps) {
       setLocation("/login");
       return;
     }
-    // Verify role
+    // Verify role (accept both singular and plural forms)
     if (userData) {
       const parsed = JSON.parse(userData);
-      if (parsed.role !== "students") {
+      if (parsed.role !== "students" && parsed.role !== "student") {
         setLocation("/login");
       }
     }

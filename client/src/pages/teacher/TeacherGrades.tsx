@@ -1,20 +1,20 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { 
   Users, BookOpen, Loader2, 
-  Search
+  Search, Download, Upload
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { TeacherLayout } from "@/components/TeacherLayout";
-import { format } from "date-fns";
-import { uk } from "date-fns/locale";
+import { downloadWorksheet, readWorksheetFromFile, type WorksheetRows } from "@/lib/excel";
 
 interface GroupDetail {
   degree: string;
@@ -64,8 +64,10 @@ export default function TeacherGrades() {
   const [searchQuery, setSearchQuery] = useState("");
   const [editingGrades, setEditingGrades] = useState<Record<string, string>>({});
   const [savingCellKey, setSavingCellKey] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Fetch groups
   const { data: groups, isLoading: groupsLoading } = useQuery<GroupDetail[]>({
@@ -245,6 +247,177 @@ export default function TeacherGrades() {
   }, [selectedDiscipline, submitGradeMutation, toast, clearEditingGrade]);
 
   const selectedGroup = groups?.find(g => g.group.en === selectedGroupEn);
+  const TEMPLATE_NAME = "UnifiedWeb Teacher Grades";
+
+  const handleExport = useCallback(() => {
+    if (!selectedGroup || !selectedDiscipline) {
+      toast({
+        variant: "destructive",
+        title: "Помилка",
+        description: "Оберіть групу та дисципліну",
+      });
+      return;
+    }
+
+    const dates = allDates.length > 0 ? allDates : ["DD-MM-YYYY"];
+    const headerRow = ["EDBO ID", "Student", ...dates];
+    const rows: WorksheetRows = [
+      ["Template", TEMPLATE_NAME],
+      ["Group", selectedGroup.group.en],
+      ["Discipline", selectedDiscipline],
+      ["Grade System", GRADE_SYSTEM],
+      headerRow,
+      ...(assessments || []).map((student) => {
+        const fullName = `${student.student.last_name} ${student.student.first_name} ${student.student.middle_name}`;
+        const grades = dates.map((date) => student.discipline?.[selectedDiscipline]?.[date] ?? "");
+        return [student.edbo_id, fullName, ...grades];
+      }),
+    ];
+
+    const safeDiscipline = selectedDiscipline.replace(/[\\/:*?"<>|]/g, "-");
+    downloadWorksheet(rows, `Teacher_Grades_${selectedGroup.group.en}_${safeDiscipline}.xlsx`, "Grades");
+  }, [assessments, allDates, selectedDiscipline, selectedGroup, toast]);
+
+  const handleImport = useCallback(async (file: File) => {
+    if (!selectedGroup || !selectedDiscipline) {
+      toast({
+        variant: "destructive",
+        title: "Помилка",
+        description: "Оберіть групу та дисципліну перед імпортом",
+      });
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const rows = await readWorksheetFromFile(file);
+      if (rows.length < 5) {
+        throw new Error("Файл не відповідає шаблону");
+      }
+
+      if (rows[0]?.[0] !== "Template" || rows[0]?.[1] !== TEMPLATE_NAME) {
+        throw new Error("Неправильний шаблон файлу");
+      }
+
+      if (rows[1]?.[0] !== "Group" || String(rows[1]?.[1] ?? "") !== selectedGroup.group.en) {
+        throw new Error("Файл не відповідає обраній групі");
+      }
+
+      if (rows[2]?.[0] !== "Discipline" || String(rows[2]?.[1] ?? "") !== selectedDiscipline) {
+        throw new Error("Файл не відповідає обраній дисципліні");
+      }
+
+      if (rows[3]?.[0] !== "Grade System" || String(rows[3]?.[1] ?? "") !== GRADE_SYSTEM) {
+        throw new Error("Неправильна шкала оцінювання");
+      }
+
+      const headerRow = rows[4];
+      if (headerRow?.[0] !== "EDBO ID" || headerRow?.[1] !== "Student") {
+        throw new Error("Неправильні заголовки таблиці");
+      }
+
+      const dateHeaders = headerRow.slice(2).map((cell) => String(cell ?? "").trim()).filter(Boolean);
+      if (dateHeaders.length === 0) {
+        throw new Error("У файлі відсутні колонки дат");
+      }
+
+      // Handle Excel date serial numbers - convert to DD-MM-YYYY format
+      const normalizedDates = dateHeaders.map((dateValue) => {
+        const str = String(dateValue).trim();
+        // Check if it's already in DD-MM-YYYY or DD.MM.YYYY format
+        if (/^\d{2}[-./]\d{2}[-./]\d{4}$/.test(str)) {
+          return str.replace(/[./]/g, "-");
+        }
+        // Check if it's an Excel serial number (numeric)
+        const serialNum = Number(str);
+        if (!Number.isNaN(serialNum) && serialNum > 0 && serialNum < 100000) {
+          // Convert Excel serial number to date
+          // Excel's epoch is December 30, 1899
+          const excelEpoch = new Date(1899, 11, 30);
+          const date = new Date(excelEpoch.getTime() + serialNum * 24 * 60 * 60 * 1000);
+          const day = String(date.getDate()).padStart(2, "0");
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+          const year = date.getFullYear();
+          return `${day}-${month}-${year}`;
+        }
+        return str;
+      });
+      
+      const datePattern = /^\d{2}-\d{2}-\d{4}$/;
+      if (normalizedDates.some((date) => !datePattern.test(date))) {
+        throw new Error("Формат дат має бути ДД-ММ-РРРР");
+      }
+
+      const studentMap = new Map((assessments || []).map((student) => [student.edbo_id, student]));
+      const submissions: GradeSubmission[] = [];
+
+      for (let rowIndex = 5; rowIndex < rows.length; rowIndex += 1) {
+        const row = rows[rowIndex];
+        if (!row || row.length === 0) continue;
+
+        const edboId = Number(row[0]);
+        if (!edboId) continue;
+
+        if (!studentMap.has(edboId)) {
+          throw new Error(`EDBO ID ${edboId} не знайдено у поточній групі`);
+        }
+
+        normalizedDates.forEach((date, index) => {
+          const cellValue = row[index + 2];
+          if (cellValue === "" || cellValue === null || cellValue === undefined) {
+            return;
+          }
+
+          const numericValue = Number(cellValue);
+          if (!Number.isInteger(numericValue) || numericValue < 1 || numericValue > MAX_GRADE) {
+            throw new Error(`Невалідна оцінка для EDBO ID ${edboId} (${date})`);
+          }
+
+          submissions.push({
+            edbo_id: edboId,
+            subject: selectedDiscipline,
+            grade_system: GRADE_SYSTEM,
+            grade: numericValue,
+            date,
+          });
+        });
+      }
+
+      for (const submission of submissions) {
+        await apiFetch(`/api/v1/students/${submission.edbo_id}/assessment`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            subject: submission.subject,
+            grade_system: submission.grade_system,
+            grade: submission.grade,
+            date: submission.date,
+          }),
+        });
+      }
+
+      toast({
+        title: "Успіх",
+        description: "Оцінки успішно імпортовано",
+      });
+
+      refetchAssessments();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Помилка імпорту",
+        description: error?.message || "Не вдалося імпортувати файл",
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  }, [assessments, refetchAssessments, selectedDiscipline, selectedGroup, toast]);
+
+  const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await handleImport(file);
+    event.target.value = "";
+  }, [handleImport]);
 
   return (
     <TeacherLayout>
@@ -367,6 +540,28 @@ export default function TeacherGrades() {
                   <CardDescription>
                     {filteredStudents.length} студентів • {allDates.length} дат
                   </CardDescription>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={handleExport}>
+                      <Download className="w-4 h-4 mr-2" />
+                      Експорт Excel
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isImporting}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      {isImporting ? "Імпорт..." : "Імпорт Excel"}
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".xlsx,.xls"
+                      className="hidden"
+                      onChange={handleFileSelect}
+                    />
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <ScrollArea className="w-full" style={{ maxWidth: "calc(100vw - 350px)" }}>

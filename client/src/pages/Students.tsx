@@ -168,9 +168,11 @@ export default function Students() {
                           <FormLabel>EDBO ID *</FormLabel>
                           <FormControl>
                             <Input
-                              type="number"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
                               {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
                             />
                           </FormControl>
                           <FormMessage />
@@ -282,9 +284,11 @@ export default function Students() {
                           <FormLabel>EDBO ID класного керівника</FormLabel>
                           <FormControl>
                             <Input
-                              type="number"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
                               {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              onChange={(e) => field.onChange(parseInt(e.target.value, 10) || 0)}
                             />
                           </FormControl>
                           <FormMessage />

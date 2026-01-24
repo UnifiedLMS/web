@@ -13,6 +13,26 @@ export function setPrimaryColor(color: string) {
 export function useLogin() {
   const [, setLocation] = useLocation();
 
+  const handleAuthSuccess = (data: AuthResponse, tokenOverride?: string) => {
+    const tokenToStore = data.access_token || tokenOverride;
+    if (tokenToStore) {
+      localStorage.setItem("unified_token", tokenToStore);
+    }
+    localStorage.setItem("unified_user", JSON.stringify(data));
+    queryClient.setQueryData(["/api/user"], data);
+
+    const role = data.role;
+    if (role === "students" || role === "student") {
+      setLocation("/student");
+    } else if (role === "teachers" || role === "teacher") {
+      setLocation("/teacher");
+    } else if (role === "admins" || role === "admin") {
+      setLocation("/dashboard");
+    } else {
+      setLocation("/dashboard");
+    }
+  };
+
   return useMutation({
     mutationFn: async (credentials: LoginRequest) => {
       try {
@@ -57,22 +77,91 @@ export function useLogin() {
         throw error;
       }
     },
-    onSuccess: (data) => {
-      localStorage.setItem("unified_token", data.access_token);
-      localStorage.setItem("unified_user", JSON.stringify(data));
-      queryClient.setQueryData(["/api/user"], data);
-      
-      // Redirect based on role
-      const role = data.role;
-      if (role === "students") {
-        setLocation("/student");
-      } else if (role === "teachers") {
-        setLocation("/teacher");
-      } else if (role === "admins") {
-        setLocation("/dashboard");
-      } else {
-        setLocation("/dashboard");
+    onSuccess: (data) => handleAuthSuccess(data),
+  });
+}
+
+export function useTokenLogin() {
+  const [, setLocation] = useLocation();
+  const timeoutMs = 12000;
+
+  const handleAuthSuccess = (data: AuthResponse, tokenOverride?: string, roleHint?: string) => {
+    const tokenToStore = data.access_token || tokenOverride;
+    if (tokenToStore) {
+      localStorage.setItem("unified_token", tokenToStore);
+    }
+    
+    // Use roleHint if server response doesn't include a role
+    const role = data.role || roleHint;
+    console.log("[Auth] Token login role:", role, "from data:", data.role, "hint:", roleHint);
+    
+    // Store user data with role (use roleHint if data.role is missing)
+    const userData = { ...data, role: role };
+    localStorage.setItem("unified_user", JSON.stringify(userData));
+    queryClient.setQueryData(["/api/user"], userData);
+    
+    if (role === "students" || role === "student") {
+      setLocation("/student");
+    } else if (role === "teachers" || role === "teacher") {
+      setLocation("/teacher");
+    } else if (role === "admins" || role === "admin") {
+      setLocation("/dashboard");
+    } else {
+      console.warn("[Auth] Unknown role, defaulting to dashboard:", role);
+      setLocation("/dashboard");
+    }
+  };
+
+  return useMutation({
+    mutationFn: async (input: string | { token: string; roleHint?: string }): Promise<{ data: AuthResponse; token: string; roleHint?: string }> => {
+      const token = typeof input === "string" ? input : input.token;
+      const roleHint = typeof input === "string" ? undefined : input.roleHint;
+      try {
+        console.log("[Auth] Attempting token login, roleHint:", roleHint);
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+        const res = await fetch(api.auth.checkToken.path, {
+          method: api.auth.checkToken.method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+          signal: controller.signal,
+        });
+        window.clearTimeout(timeoutId);
+
+        console.log(`[Auth] Token login response status: ${res.status}`);
+
+        if (!res.ok) {
+          let errorData;
+          try {
+            const text = await res.text();
+            errorData = text ? JSON.parse(text) : {};
+          } catch (parseError) {
+            console.error("[Auth] Failed to parse token login error response:", parseError);
+            errorData = {};
+          }
+
+          const errorMessage = errorData?.message || "Не вдалося увійти за токеном";
+          console.error(`[Auth] Token login failed:`, { status: res.status, error: errorData, message: errorMessage });
+          throw new Error(errorMessage);
+        }
+
+        const data = (await res.json()) as AuthResponse;
+        console.log("[Auth] Token login successful, data:", data);
+        return { data, token, roleHint };
+      } catch (error: any) {
+        console.error("[Auth] Token login error:", error);
+        if (error?.name === "AbortError") {
+          throw new Error("Час очікування вичерпано. Спробуйте ще раз.");
+        }
+        if (error instanceof TypeError && error.message === "Failed to fetch") {
+          throw new Error("Не вдалося з'єднатися з сервером. Перевірте підключення до інтернету.");
+        }
+        throw error;
       }
+    },
+    onSuccess: (result) => {
+      console.log("[Auth] onSuccess called with:", result);
+      handleAuthSuccess(result.data, result.token, result.roleHint);
     },
   });
 }
