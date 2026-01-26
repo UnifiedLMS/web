@@ -16,7 +16,6 @@ import { apiFetch } from "@/lib/api";
 import { StudentLayout } from "@/components/StudentLayout";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday } from "date-fns";
 import { uk } from "date-fns/locale";
-import { useLocation } from "wouter";
 
 interface LessonEvent {
   startAt: string;
@@ -46,7 +45,6 @@ export default function StudentSchedule() {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
-  const [location] = useLocation();
 
   // Fetch schedule
   const { data: schedule, isLoading, error } = useQuery<Lesson[]>({
@@ -60,6 +58,14 @@ export default function StudentSchedule() {
     const trimmed = value.trim();
     if (!trimmed) return "";
     if (trimmed.toLowerCase() === "homework") return "";
+    return trimmed;
+  };
+
+  const normalizeTopic = (value?: string) => {
+    if (!value) return "";
+    const trimmed = value.trim();
+    if (!trimmed) return "";
+    if (trimmed.toLowerCase() === "topic") return "";
     return trimmed;
   };
 
@@ -101,14 +107,14 @@ export default function StudentSchedule() {
     return grouped;
   }, [schedule]);
 
+  // Handle deep linking from grades page - open specific lesson dialog
   useEffect(() => {
     if (!schedule) return;
-    const searchIndex = location.indexOf("?");
-    if (searchIndex === -1) return;
-
-    const params = new URLSearchParams(location.slice(searchIndex + 1));
-    const dateParam = params.get("date");
-    const subjectParam = params.get("subject");
+    
+    // Use window.location.search to reliably get query params (wouter's location may not include them)
+    const searchParams = new URLSearchParams(window.location.search);
+    const dateParam = searchParams.get("date");
+    const subjectParam = searchParams.get("subject");
     if (!dateParam && !subjectParam) return;
 
     const normalizedDateParam = dateParam ? normalizeDateKey(dateParam) : null;
@@ -125,16 +131,28 @@ export default function StudentSchedule() {
       }
     }
 
+    // Find and open the specific lesson
     if (normalizedSubjectParam) {
       const matchedLesson = schedule.find(lesson => {
         const dateMatches = normalizedDateParam ? getLessonDateKey(lesson) === normalizedDateParam : true;
         return dateMatches && normalizeSubject(lesson.subject) === normalizedSubjectParam;
       });
       if (matchedLesson) {
-        setSelectedLesson(matchedLesson);
+        // Small delay to ensure the UI has rendered before opening dialog
+        requestAnimationFrame(() => {
+          setSelectedLesson(matchedLesson);
+        });
       }
     }
-  }, [schedule, location]);
+    
+    // Clean up URL after processing to avoid re-triggering
+    if (dateParam || subjectParam) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("date");
+      url.searchParams.delete("subject");
+      window.history.replaceState({}, "", url.pathname);
+    }
+  }, [schedule]);
 
   // Get lessons for selected date
   const selectedDateLessons = useMemo(() => {
@@ -311,14 +329,20 @@ export default function StudentSchedule() {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <AnimatePresence>
+                        <AnimatePresence mode="popLayout">
                           {selectedDateLessons.map((lesson, index) => (
                             <motion.div
-                              key={`${lesson.position}-${lesson.subject}`}
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              exit={{ opacity: 0, x: 20 }}
-                              transition={{ duration: 0.2, delay: index * 0.05, ease: "easeInOut" }}
+                              key={`${format(selectedDate, "yyyy-MM-dd")}-${lesson.position}-${lesson.subject}`}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              transition={{ 
+                                duration: 0.15, 
+                                delay: index * 0.03, 
+                                ease: [0.25, 0.1, 0.25, 1]
+                              }}
+                              layout
+                              style={{ willChange: "transform, opacity" }}
                             >
                               {(() => {
                                 const homeworkText = normalizeHomework(lesson.homework);
@@ -415,9 +439,14 @@ export default function StudentSchedule() {
                             {lessons.map((lesson, index) => (
                               <motion.div
                                 key={`${dateKey}-${lesson.position}-${lesson.subject}`}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ duration: 0.2, delay: index * 0.03, ease: "easeInOut" }}
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ 
+                                  duration: 0.15, 
+                                  delay: index * 0.02, 
+                                  ease: [0.25, 0.1, 0.25, 1]
+                                }}
+                                style={{ willChange: "transform, opacity" }}
                               >
                                 {(() => {
                                   const homeworkText = normalizeHomework(lesson.homework);
@@ -521,15 +550,19 @@ export default function StudentSchedule() {
                   )}
 
                   {/* Topic */}
-                  {selectedLesson.topic && (
-                    <div className="p-3 rounded-lg bg-muted/50">
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                        <BookOpen className="w-4 h-4" />
-                        Тема заняття
+                  {(() => {
+                    const topicText = normalizeTopic(selectedLesson.topic);
+                    if (!topicText) return null;
+                    return (
+                      <div className="p-3 rounded-lg bg-muted/50">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                          <BookOpen className="w-4 h-4" />
+                          Тема заняття
+                        </div>
+                        <p>{topicText}</p>
                       </div>
-                      <p>{selectedLesson.topic}</p>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   {/* Homework */}
                   {(() => {

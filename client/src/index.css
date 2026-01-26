@@ -173,3 +173,98 @@
 .dark .glass {
   background: hsl(var(--card) / 0.6);
 }
+
+/* Optimized background blob animations - GPU accelerated with long durations */
+@keyframes blob-1 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.2;
+  }
+  50% {
+    transform: translate(20px, 20px) scale(1.15);
+    opacity: 0.3;
+  }
+}
+
+@keyframes blob-2 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.1;
+  }
+  50% {
+    transform: translate(-30px, 25px) scale(1.1);
+    opacity: 0.2;
+  }
+}
+
+@keyframes blob-3 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.15;
+  }
+  50% {
+    transform: translate(-20px, -20px) scale(1.08);
+    opacity: 0.25;
+  }
+}
+
+@keyframes float-1 {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.2;
+  }
+  50% {
+    transform: translateY(-10px);
+    opacity: 0.35;
+  }
+}
+
+@keyframes float-2 {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.15;
+  }
+  50% {
+    transform: translateY(10px);
+    opacity: 0.25;
+  }
+}
+
+@keyframes float-3 {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.1;
+  }
+  50% {
+    transform: translateY(-8px);
+    opacity: 0.2;
+  }
+}
+
+.animate-blob-1 {
+  animation: blob-1 18s ease-in-out infinite;
+}
+
+.animate-blob-2 {
+  animation: blob-2 22s ease-in-out infinite;
+  animation-delay: 2s;
+}
+
+.animate-blob-3 {
+  animation: blob-3 20s ease-in-out infinite;
+  animation-delay: 4s;
+}
+
+.animate-float-1 {
+  animation: float-1 8s ease-in-out infinite;
+}
+
+.animate-float-2 {
+  animation: float-2 10s ease-in-out infinite;
+  animation-delay: 1s;
+}
+
+.animate-float-3 {
+  animation: float-3 9s ease-in-out infinite;
+  animation-delay: 2s;
+}
