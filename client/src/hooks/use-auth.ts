@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { api, type LoginRequest, type AuthResponse } from "@shared/routes";
+import { api, type LoginRequest, type AuthResponse, extractRole, extractToken } from "@shared/routes";
 import { queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 
@@ -14,14 +14,19 @@ export function useLogin() {
   const [, setLocation] = useLocation();
 
   const handleAuthSuccess = (data: AuthResponse, tokenOverride?: string) => {
-    const tokenToStore = data.access_token || tokenOverride;
+    const tokenToStore = extractToken(data) || tokenOverride;
     if (tokenToStore) {
       localStorage.setItem("unified_token", tokenToStore);
     }
-    localStorage.setItem("unified_user", JSON.stringify(data));
-    queryClient.setQueryData(["/api/user"], data);
+    
+    const role = extractRole(data);
+    console.log("[Auth] Login role detected:", role, "from data:", data);
+    
+    // Store user data with normalized role
+    const userData = { ...data, role: role };
+    localStorage.setItem("unified_user", JSON.stringify(userData));
+    queryClient.setQueryData(["/api/user"], userData);
 
-    const role = data.role;
     if (role === "students" || role === "student") {
       setLocation("/student");
     } else if (role === "teachers" || role === "teacher") {
@@ -29,6 +34,7 @@ export function useLogin() {
     } else if (role === "admins" || role === "admin") {
       setLocation("/dashboard");
     } else {
+      console.warn("[Auth] Unknown or missing role, defaulting to dashboard:", role);
       setLocation("/dashboard");
     }
   };
@@ -86,14 +92,14 @@ export function useTokenLogin() {
   const timeoutMs = 12000;
 
   const handleAuthSuccess = (data: AuthResponse, tokenOverride?: string, roleHint?: string) => {
-    const tokenToStore = data.access_token || tokenOverride;
+    const tokenToStore = extractToken(data) || tokenOverride;
     if (tokenToStore) {
       localStorage.setItem("unified_token", tokenToStore);
     }
     
     // Use roleHint if server response doesn't include a role
-    const role = data.role || roleHint;
-    console.log("[Auth] Token login role:", role, "from data:", data.role, "hint:", roleHint);
+    const role = extractRole(data) || roleHint;
+    console.log("[Auth] Token login role:", role, "from data:", extractRole(data), "hint:", roleHint);
     
     // Store user data with role (use roleHint if data.role is missing)
     const userData = { ...data, role: role };
@@ -107,7 +113,7 @@ export function useTokenLogin() {
     } else if (role === "admins" || role === "admin") {
       setLocation("/dashboard");
     } else {
-      console.warn("[Auth] Unknown role, defaulting to dashboard:", role);
+      console.warn("[Auth] Unknown or missing role, defaulting to dashboard:", role);
       setLocation("/dashboard");
     }
   };
@@ -195,7 +201,7 @@ export function useCheckToken() {
       }
 
       const data = (await res.json()) as AuthResponse;
-        console.log("[Auth] Token valid");
+        console.log("[Auth] Token valid, data:", data);
       return data;
       } catch (error: any) {
         console.error("[Auth] Token check error:", error);
@@ -207,12 +213,19 @@ export function useCheckToken() {
     },
     onSuccess: (data) => {
       // Update token if a new one is returned (token exchange)
-      if (data.access_token) {
+      const newToken = extractToken(data);
+      if (newToken) {
         console.log("[Auth] New token received, updating stored token");
-        localStorage.setItem("unified_token", data.access_token);
+        localStorage.setItem("unified_token", newToken);
       }
-      localStorage.setItem("unified_user", JSON.stringify(data));
-      queryClient.setQueryData(["/api/user"], data);
+      
+      // Normalize role from various possible field names
+      const role = extractRole(data);
+      console.log("[Auth] Token check role:", role);
+      
+      const userData = { ...data, role: role };
+      localStorage.setItem("unified_user", JSON.stringify(userData));
+      queryClient.setQueryData(["/api/user"], userData);
     }
   });
 }

@@ -13,9 +13,13 @@ export const tokenCheckSchema = z.object({
 });
 
 export const authResponseSchema = z.object({
-  access_token: z.string(),
-  role: z.string(),
+  access_token: z.string().optional(),
+  role: z.string().optional(),
   username: z.string().optional(),
+  // Some APIs return these alternative field names
+  token: z.string().optional(),
+  user_role: z.string().optional(),
+  userRole: z.string().optional(),
 });
 
 export type LoginRequest = z.infer<typeof loginRequestSchema>;
@@ -24,3 +28,15 @@ export type User = {
   username: string;
   role: string;
 };
+
+// Helper to extract role from various possible field names in API response
+export function extractRole(data: any): string | undefined {
+  if (!data) return undefined;
+  return data.role || data.user_role || data.userRole || undefined;
+}
+
+// Helper to extract token from various possible field names in API response
+export function extractToken(data: any): string | undefined {
+  if (!data) return undefined;
+  return data.access_token || data.token || undefined;
+}

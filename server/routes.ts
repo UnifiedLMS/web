@@ -86,14 +86,22 @@ export async function registerRoutes(
         return res.status(500).send(text);
       }
 
-      const token = data?.access_token;
+      const token = data?.access_token || data?.token;
       if (!token) {
         console.error("[Auth] Missing access token in response:", data);
         return res.status(500).json({ message: "Token missing in Google response" });
       }
 
-      const redirectTo = `${origin}/login?access_token=${encodeURIComponent(token)}`;
-      console.log(`[Auth] Redirecting to app login: ${redirectTo}`);
+      // Extract role if available (various possible field names)
+      const role = data?.role || data?.user_role || data?.userRole;
+      
+      // Build redirect URL with token and optionally role
+      let redirectTo = `${origin}/login?access_token=${encodeURIComponent(token)}`;
+      if (role) {
+        redirectTo += `&role=${encodeURIComponent(role)}`;
+      }
+      
+      console.log(`[Auth] Redirecting to app login: ${redirectTo} (role: ${role || 'not provided'})`);
       res.redirect(redirectTo);
     } catch (err: any) {
       console.error("[Auth] Google callback error:", err);

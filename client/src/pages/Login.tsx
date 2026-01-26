@@ -208,12 +208,13 @@ export default function Login() {
       return;
     }
 
-    const { type, token, error } = event.data || {};
+    const { type, token, role, error } = event.data || {};
     
     if (type === "oauth_complete" && token) {
       resetGoogleState();
 
-      tokenLoginMutation.mutate(token, {
+      // Pass role hint if available from the popup
+      tokenLoginMutation.mutate({ token, roleHint: role || undefined }, {
         onError: (err) => {
           toast({
             variant: "destructive",
@@ -237,20 +238,24 @@ export default function Login() {
     const isPopup = window.opener && window.opener !== window;
     const url = new URL(window.location.href);
     const tokenFromQuery = url.searchParams.get("token") || url.searchParams.get("access_token");
+    const roleFromQuery = url.searchParams.get("role") || url.searchParams.get("user_role");
     let tokenFromHash: string | null = null;
+    let roleFromHash: string | null = null;
 
     if (!tokenFromQuery && url.hash) {
       const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
       tokenFromHash = hashParams.get("token") || hashParams.get("access_token");
+      roleFromHash = hashParams.get("role") || hashParams.get("user_role");
     }
 
     const oauthToken = tokenFromQuery || tokenFromHash;
+    const oauthRole = roleFromQuery || roleFromHash;
 
     // If we're in a popup with a token, send it to the opener and close
     if (isPopup && oauthToken) {
       try {
         window.opener.postMessage(
-          { type: "oauth_complete", token: oauthToken },
+          { type: "oauth_complete", token: oauthToken, role: oauthRole },
           window.location.origin
         );
       } catch (e) {
@@ -276,7 +281,8 @@ export default function Login() {
 
     // If we're the main window with a token in URL (direct redirect fallback)
     if (!isPopup && oauthToken) {
-      tokenLoginMutation.mutate(oauthToken, {
+      // Pass role hint if available from URL params
+      tokenLoginMutation.mutate({ token: oauthToken, roleHint: oauthRole || undefined }, {
         onError: (error) => {
           toast({
             variant: "destructive",
@@ -289,10 +295,14 @@ export default function Login() {
       // Clean up the URL
       url.searchParams.delete("token");
       url.searchParams.delete("access_token");
+      url.searchParams.delete("role");
+      url.searchParams.delete("user_role");
       if (url.hash) {
         const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
         hashParams.delete("token");
         hashParams.delete("access_token");
+        hashParams.delete("role");
+        hashParams.delete("user_role");
         url.hash = hashParams.toString() ? `#${hashParams.toString()}` : "";
       }
       window.history.replaceState({}, document.title, url.toString());
