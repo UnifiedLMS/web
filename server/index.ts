@@ -86,15 +86,14 @@ app.use((req, res, next) => {
     await setupVite(httpServer, app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || "6677", 10);
+  // Render.com requires binding to host 0.0.0.0 to receive HTTP requests from the public internet.
+  // The default port for Render web services is 10000.
+  // See: https://render.com/docs/web-services#port-binding
+  const port = parseInt(process.env.PORT || "10000", 10);
   httpServer.listen(
     {
       port,
-      host: "127.0.0.1",
+      host: "0.0.0.0",
     },
     () => {
       log(`serving on port ${port}`);
