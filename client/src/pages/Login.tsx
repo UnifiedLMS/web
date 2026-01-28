@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
+  const [isExchangingCode, setIsExchangingCode] = useState(false);
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("theme") === "dark" || document.documentElement.classList.contains("dark");
@@ -59,11 +60,11 @@ export default function Login() {
     });
   };
 
-  // Handle token from URL when API redirects back after Google auth
+  // Handle OAuth callback - exchange code for token
   useEffect(() => {
     const url = new URL(window.location.href);
-    const token = url.searchParams.get("token") || url.searchParams.get("access_token");
-    const role = url.searchParams.get("role") || url.searchParams.get("user_role");
+    const code = url.searchParams.get("code");
+    const state = url.searchParams.get("state");
     const error = url.searchParams.get("error") || url.searchParams.get("oauth_error");
 
     // Handle error from OAuth
@@ -78,31 +79,67 @@ export default function Login() {
       url.searchParams.delete("error");
       url.searchParams.delete("oauth_error");
       url.searchParams.delete("error_description");
+      url.searchParams.delete("code");
+      url.searchParams.delete("state");
       window.history.replaceState({}, document.title, url.toString());
       return;
     }
 
-    // Handle token from OAuth redirect
-    if (token) {
+    // Handle code from OAuth redirect - exchange it for token
+    if (code && !isExchangingCode) {
+      setIsExchangingCode(true);
+      
       // Clean up URL first
-      url.searchParams.delete("token");
-      url.searchParams.delete("access_token");
-      url.searchParams.delete("role");
-      url.searchParams.delete("user_role");
+      url.searchParams.delete("code");
+      url.searchParams.delete("state");
       window.history.replaceState({}, document.title, url.toString());
 
-      // Process the token
-      tokenLoginMutation.mutate({ token, roleHint: role || undefined }, {
-        onError: (err) => {
+      // Call the callback endpoint to exchange code for token
+      const callbackUrl = new URL("/api/proxy/api/v1/auth/google/callback", window.location.origin);
+      callbackUrl.searchParams.set("code", code);
+      if (state) {
+        callbackUrl.searchParams.set("state", state);
+      }
+
+      fetch(callbackUrl.toString())
+        .then(async (response) => {
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || "Не вдалося отримати токен");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          const token = data.access_token || data.token;
+          const role = data.role || data.user_role || data.userRole;
+          
+          if (!token) {
+            throw new Error("Токен не отримано від сервера");
+          }
+
+          // Process the token
+          tokenLoginMutation.mutate({ token, roleHint: role || undefined }, {
+            onError: (err) => {
+              toast({
+                variant: "destructive",
+                title: "Помилка входу через Google",
+                description: err.message,
+              });
+              setIsExchangingCode(false);
+            },
+          });
+        })
+        .catch((err) => {
+          console.error("[OAuth] Code exchange error:", err);
           toast({
             variant: "destructive",
             title: "Помилка входу через Google",
-            description: err.message,
+            description: err.message || "Не вдалося обміняти код на токен",
           });
-        },
-      });
+          setIsExchangingCode(false);
+        });
     }
-  }, [tokenLoginMutation, toast]);
+  }, [tokenLoginMutation, toast, isExchangingCode]);
 
   const handleGoogleLogin = () => {
     // Redirect to Google auth - API will redirect back with token
@@ -214,7 +251,7 @@ export default function Login() {
                 <Button 
                   type="submit" 
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-12 mt-3 glow-primary transition-all duration-300"
-                  disabled={loginMutation.isPending || tokenLoginMutation.isPending}
+                  disabled={loginMutation.isPending || tokenLoginMutation.isPending || isExchangingCode}
                 >
                   {loginMutation.isPending ? (
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -237,15 +274,15 @@ export default function Login() {
                     type="button"
                     variant="outline"
                     onClick={handleGoogleLogin}
-                    disabled={loginMutation.isPending || tokenLoginMutation.isPending}
+                    disabled={loginMutation.isPending || tokenLoginMutation.isPending || isExchangingCode}
                     className="w-full border-border dark:border-white/20 text-foreground dark:text-white hover:bg-muted dark:hover:bg-white/10 h-12"
                   >
-                    {tokenLoginMutation.isPending ? (
+                    {(tokenLoginMutation.isPending || isExchangingCode) ? (
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     ) : (
                       <Chrome className="mr-2 h-5 w-5" />
                     )}
-                    {tokenLoginMutation.isPending ? "Вхід..." : "Увійти через Google"}
+                    {isExchangingCode ? "Отримання токена..." : tokenLoginMutation.isPending ? "Вхід..." : "Увійти через Google"}
                   </Button>
                 </div>
               </form>

@@ -62,20 +62,31 @@ export async function registerRoutes(
     res.redirect(redirectUrl.toString());
   });
 
-  // Google OAuth Callback -> Exchange code, then redirect to login with token
+  // Google OAuth Callback -> Exchange code for token and return JSON
   app.get("/api/proxy/api/v1/auth/google/callback", async (req, res) => {
     try {
-      const origin = `${req.protocol}://${req.get("host")}`;
-      const queryString = req.url.includes("?") ? req.url.substring(req.url.indexOf("?")) : "";
-      const url = `${EXTERNAL_API}/api/v1/auth/google${queryString}`;
-      console.log(`[Auth] Exchanging Google code: ${url}`);
+      const code = typeof req.query.code === "string" ? req.query.code : "";
+      const state = typeof req.query.state === "string" ? req.query.state : "";
 
-      const response = await fetch(url);
+      if (!code) {
+        return res.status(400).json({ message: "Missing authorization code" });
+      }
+
+      // Build URL to exchange code for token
+      const url = new URL(`${EXTERNAL_API}/api/v1/auth/google/callback`);
+      url.searchParams.set("code", code);
+      if (state) {
+        url.searchParams.set("state", state);
+      }
+
+      console.log(`[Auth] Exchanging Google code: ${url.toString()}`);
+
+      const response = await fetch(url.toString());
       const text = await response.text();
 
       if (!response.ok) {
         console.error("[Auth] Google exchange failed:", text);
-        return res.status(response.status).send(text);
+        return res.status(response.status).json({ message: text || "Failed to exchange code" });
       }
 
       let data: any;
@@ -83,26 +94,18 @@ export async function registerRoutes(
         data = JSON.parse(text);
       } catch (parseError) {
         console.error("[Auth] Failed to parse Google exchange response:", parseError);
-        return res.status(500).send(text);
+        return res.status(500).json({ message: "Invalid response from auth server" });
       }
 
       const token = data?.access_token || data?.token;
       if (!token) {
         console.error("[Auth] Missing access token in response:", data);
-        return res.status(500).json({ message: "Token missing in Google response" });
+        return res.status(500).json({ message: "Token missing in response" });
       }
 
-      // Extract role if available (various possible field names)
-      const role = data?.role || data?.user_role || data?.userRole;
-      
-      // Build redirect URL with token and optionally role
-      let redirectTo = `${origin}/login?access_token=${encodeURIComponent(token)}`;
-      if (role) {
-        redirectTo += `&role=${encodeURIComponent(role)}`;
-      }
-      
-      console.log(`[Auth] Redirecting to app login: ${redirectTo} (role: ${role || 'not provided'})`);
-      res.redirect(redirectTo);
+      // Return the token data as JSON
+      console.log(`[Auth] Google code exchange successful, role: ${data?.role || 'not provided'}`);
+      res.json(data);
     } catch (err: any) {
       console.error("[Auth] Google callback error:", err);
       res.status(500).json({ message: err.message || "Internal Server Error" });
