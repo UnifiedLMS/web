@@ -48,8 +48,8 @@ export async function registerRoutes(
   // Google OAuth Login Redirect
   app.get(api.auth.loginGoogle.path, (req, res) => {
     const origin = `${req.protocol}://${req.get("host")}`;
-    const callbackUrl = `${origin}/api/proxy/api/v1/auth/google/callback`;
-    const redirectUrl = new URL(`${EXTERNAL_API}/api/v1/auth/login/google`);
+    const callbackUrl = `${origin}/login`;
+    const redirectUrl = new URL(`${EXTERNAL_API}/api/v1/auth/google`);
     redirectUrl.searchParams.set("redirect_uri", callbackUrl);
     redirectUrl.searchParams.set("redirect_url", callbackUrl);
     redirectUrl.searchParams.set("redirect", callbackUrl);
@@ -179,9 +179,7 @@ export async function registerRoutes(
     if (
       req.path.startsWith("/api/proxy/auth/login") ||
       req.path.startsWith("/api/proxy/auth/token") ||
-      req.path.startsWith("/api/proxy/api/v1/auth/login/google") ||
-      req.path.startsWith("/api/proxy/api/v1/auth/google/callback") ||
-      req.path.startsWith("/api/proxy/api/v1/auth/google/exchange")
+      req.path.startsWith("/api/proxy/api/v1/auth/google")
     ) {
       return next();
     }
