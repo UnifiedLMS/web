@@ -1,5 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
-import { useLocation } from "wouter";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,7 +17,6 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
-  const [googleLoginPending, setGoogleLoginPending] = useState(false);
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("theme") === "dark" || document.documentElement.classList.contains("dark");
@@ -28,7 +26,6 @@ export default function Login() {
   const { toast } = useToast();
   const loginMutation = useLogin();
   const tokenLoginMutation = useTokenLogin();
-  const [, setLocation] = useLocation();
 
   const toggleTheme = () => {
     const newIsDark = !isDark;
@@ -62,46 +59,15 @@ export default function Login() {
     });
   };
 
-  const resetGoogleState = useCallback(() => {
-    setGoogleLoginPending(false);
-  }, []);
-
-  // Handle OAuth token from redirect
-  const handleOAuthRedirect = useCallback((token: string, role?: string | null) => {
-    resetGoogleState();
-
-    // Pass role hint if available from the redirect
-    tokenLoginMutation.mutate({ token, roleHint: role || undefined }, {
-      onError: (err) => {
-        toast({
-          variant: "destructive",
-          title: "Помилка входу через Google",
-          description: err.message,
-        });
-      },
-    });
-  }, [tokenLoginMutation, toast, resetGoogleState]);
-
+  // Handle token from URL when API redirects back after Google auth
   useEffect(() => {
-    // Handle OAuth redirect - check for token in URL params or hash
     const url = new URL(window.location.href);
-    const tokenFromQuery = url.searchParams.get("token") || url.searchParams.get("access_token");
-    const roleFromQuery = url.searchParams.get("role") || url.searchParams.get("user_role");
-    let tokenFromHash: string | null = null;
-    let roleFromHash: string | null = null;
+    const token = url.searchParams.get("token") || url.searchParams.get("access_token");
+    const role = url.searchParams.get("role") || url.searchParams.get("user_role");
+    const error = url.searchParams.get("error") || url.searchParams.get("oauth_error");
 
-    if (!tokenFromQuery && url.hash) {
-      const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
-      tokenFromHash = hashParams.get("token") || hashParams.get("access_token");
-      roleFromHash = hashParams.get("role") || hashParams.get("user_role");
-    }
-
-    const oauthToken = tokenFromQuery || tokenFromHash;
-    const oauthRole = roleFromQuery || roleFromHash;
-
-    // Check for OAuth error
-    const oauthError = url.searchParams.get("oauth_error") || url.searchParams.get("error");
-    if (oauthError) {
+    // Handle error from OAuth
+    if (error) {
       toast({
         variant: "destructive",
         title: "Помилка входу через Google",
@@ -109,39 +75,37 @@ export default function Login() {
       });
       
       // Clean up URL
-      url.searchParams.delete("oauth_error");
       url.searchParams.delete("error");
+      url.searchParams.delete("oauth_error");
       url.searchParams.delete("error_description");
       window.history.replaceState({}, document.title, url.toString());
       return;
     }
 
-    // If we have a token from redirect, process it
-    if (oauthToken) {
-      handleOAuthRedirect(oauthToken, oauthRole);
-
-      // Clean up the URL
+    // Handle token from OAuth redirect
+    if (token) {
+      // Clean up URL first
       url.searchParams.delete("token");
       url.searchParams.delete("access_token");
       url.searchParams.delete("role");
       url.searchParams.delete("user_role");
-      if (url.hash) {
-        const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
-        hashParams.delete("token");
-        hashParams.delete("access_token");
-        hashParams.delete("role");
-        hashParams.delete("user_role");
-        url.hash = hashParams.toString() ? `#${hashParams.toString()}` : "";
-      }
       window.history.replaceState({}, document.title, url.toString());
-    }
-  }, [handleOAuthRedirect, toast]);
 
+      // Process the token
+      tokenLoginMutation.mutate({ token, roleHint: role || undefined }, {
+        onError: (err) => {
+          toast({
+            variant: "destructive",
+            title: "Помилка входу через Google",
+            description: err.message,
+          });
+        },
+      });
+    }
+  }, [tokenLoginMutation, toast]);
 
   const handleGoogleLogin = () => {
-    // Redirect in the same window instead of opening a popup
-    // The Google OAuth will redirect back to this page with the token
-    setGoogleLoginPending(true);
+    // Redirect to Google auth - API will redirect back with token
     window.location.href = api.auth.loginGoogle.path;
   };
 
@@ -250,7 +214,7 @@ export default function Login() {
                 <Button 
                   type="submit" 
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-12 mt-3 glow-primary transition-all duration-300"
-                  disabled={loginMutation.isPending || tokenLoginMutation.isPending || googleLoginPending}
+                  disabled={loginMutation.isPending || tokenLoginMutation.isPending}
                 >
                   {loginMutation.isPending ? (
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -273,15 +237,15 @@ export default function Login() {
                     type="button"
                     variant="outline"
                     onClick={handleGoogleLogin}
-                    disabled={loginMutation.isPending || tokenLoginMutation.isPending || googleLoginPending}
+                    disabled={loginMutation.isPending || tokenLoginMutation.isPending}
                     className="w-full border-border dark:border-white/20 text-foreground dark:text-white hover:bg-muted dark:hover:bg-white/10 h-12"
                   >
-                    {googleLoginPending || tokenLoginMutation.isPending ? (
+                    {tokenLoginMutation.isPending ? (
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     ) : (
                       <Chrome className="mr-2 h-5 w-5" />
                     )}
-                    {tokenLoginMutation.isPending ? "Вхід..." : googleLoginPending ? "Перенаправлення..." : "Увійти через Google"}
+                    {tokenLoginMutation.isPending ? "Вхід..." : "Увійти через Google"}
                   </Button>
                 </div>
               </form>

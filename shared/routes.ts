@@ -27,7 +27,7 @@ export const api = {
     },
     loginGoogle: {
       method: 'GET' as const,
-      path: '/api/proxy/api/v1/auth/login/google',
+      path: '/api/proxy/api/v1/auth/google',
       responses: {
         500: errorSchemas.serverError
       }
