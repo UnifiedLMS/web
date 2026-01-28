@@ -152,6 +152,8 @@ export default function Login() {
     if (hasCode) return;
 
     const cookieString = document.cookie || "";
+    console.log("[OAuth] document.cookie value:", cookieString);
+
     if (!cookieString) {
       setDidTryCookieLogin(true);
       return;
