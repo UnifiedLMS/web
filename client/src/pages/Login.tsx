@@ -29,6 +29,11 @@ export default function Login() {
   const loginMutation = useLogin();
   const tokenLoginMutation = useTokenLogin();
 
+  // Debug: always log cookies when Login mounts
+  useEffect(() => {
+    console.log("[OAuth] document.cookie on /login mount:", document.cookie || "");
+  }, []);
+
   const toggleTheme = () => {
     const newIsDark = !isDark;
     setIsDark(newIsDark);
