@@ -2,10 +2,16 @@ import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { Table2, Users, UserPlus, GraduationCap, BookOpen } from "lucide-react";
+import { Table2, Users, UserPlus, GraduationCap, BookOpen, Calendar } from "lucide-react";
 
 export default function Home() {
   const features = [
+    {
+      title: "Розклад",
+      description: "Управління розкладом занять та оцінками студентів будь-якої групи",
+      icon: Calendar,
+      link: "/schedule",
+    },
     {
       title: "Електронні відомості",
       description: "Перегляд та управління електронними відомостями з можливістю сортування за групами",

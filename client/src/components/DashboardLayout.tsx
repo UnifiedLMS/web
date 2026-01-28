@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { LogOut, Settings, Home, Table2, Users, GraduationCap, BookOpen } from "lucide-react";
+import { LogOut, Settings, Home, Table2, Users, GraduationCap, BookOpen, Calendar } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import unifiedLogo from "@assets/unified_logo.png";
 import { useLogout } from "@/hooks/use-auth";
@@ -46,6 +46,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       title: "Головна",
       icon: Home,
       link: "/home",
+    },
+    {
+      title: "Розклад",
+      icon: Calendar,
+      link: "/schedule",
     },
     {
       title: "Електронні відомості",

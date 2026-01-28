@@ -15,18 +15,30 @@ export function useLogin() {
 
   const handleAuthSuccess = (data: AuthResponse, tokenOverride?: string) => {
     const tokenToStore = extractToken(data) || tokenOverride;
-    if (tokenToStore) {
-      localStorage.setItem("unified_token", tokenToStore);
+    const role = extractRole(data);
+    
+    console.log("[Auth] Login role detected:", role, "from data:", data);
+    
+    // Verify role exists before proceeding
+    if (!role) {
+      console.error("[Auth] No role found in response, login rejected");
+      throw new Error("Не вдалося визначити роль користувача");
     }
     
-    const role = extractRole(data);
-    console.log("[Auth] Login role detected:", role, "from data:", data);
+    // Store token only after validation
+    if (tokenToStore) {
+      localStorage.setItem("unified_token", tokenToStore);
+    } else {
+      console.error("[Auth] No token found in response");
+      throw new Error("Не вдалося отримати токен авторизації");
+    }
     
     // Store user data with normalized role
     const userData = { ...data, role: role };
     localStorage.setItem("unified_user", JSON.stringify(userData));
     queryClient.setQueryData(["/api/user"], userData);
 
+    // Redirect based on verified role
     if (role === "students" || role === "student") {
       setLocation("/student");
     } else if (role === "teachers" || role === "teacher") {
@@ -34,8 +46,10 @@ export function useLogin() {
     } else if (role === "admins" || role === "admin") {
       setLocation("/dashboard");
     } else {
-      console.warn("[Auth] Unknown or missing role, defaulting to dashboard:", role);
-      setLocation("/dashboard");
+      console.warn("[Auth] Unknown role, redirecting to login:", role);
+      localStorage.removeItem("unified_token");
+      localStorage.removeItem("unified_user");
+      throw new Error(`Невідома роль користувача: ${role}`);
     }
   };
 
@@ -43,15 +57,15 @@ export function useLogin() {
     mutationFn: async (credentials: LoginRequest) => {
       try {
         console.log("[Auth] Attempting login for user:", credentials.username);
-      const res = await fetch(api.auth.login.path, {
-        method: api.auth.login.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(credentials),
-      });
+        const res = await fetch(api.auth.login.path, {
+          method: api.auth.login.method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(credentials),
+        });
 
         console.log(`[Auth] Login response status: ${res.status}`);
 
-      if (!res.ok) {
+        if (!res.ok) {
           let errorData;
           try {
             const text = await res.text();
@@ -70,10 +84,25 @@ export function useLogin() {
           
           console.error(`[Auth] Login failed:`, { status: res.status, error: errorData, message: errorMessage });
           throw new Error(errorMessage);
-      }
+        }
 
         const data = (await res.json()) as AuthResponse;
-        console.log("[Auth] Login successful");
+        
+        // Validate response has required fields
+        const token = extractToken(data);
+        const role = extractRole(data);
+        
+        if (!token) {
+          console.error("[Auth] Response missing token");
+          throw new Error("Сервер не повернув токен авторизації");
+        }
+        
+        if (!role) {
+          console.error("[Auth] Response missing role");
+          throw new Error("Сервер не повернув роль користувача");
+        }
+        
+        console.log("[Auth] Login successful, role:", role);
         return data;
       } catch (error: any) {
         console.error("[Auth] Login error:", error);
@@ -93,19 +122,31 @@ export function useTokenLogin() {
 
   const handleAuthSuccess = (data: AuthResponse, tokenOverride?: string, roleHint?: string) => {
     const tokenToStore = extractToken(data) || tokenOverride;
-    if (tokenToStore) {
-      localStorage.setItem("unified_token", tokenToStore);
-    }
     
     // Use roleHint if server response doesn't include a role
     const role = extractRole(data) || roleHint;
     console.log("[Auth] Token login role:", role, "from data:", extractRole(data), "hint:", roleHint);
+    
+    // Verify role exists before proceeding
+    if (!role) {
+      console.error("[Auth] No role found in response or hint, login rejected");
+      throw new Error("Не вдалося визначити роль користувача");
+    }
+    
+    // Store token only after validation
+    if (tokenToStore) {
+      localStorage.setItem("unified_token", tokenToStore);
+    } else {
+      console.error("[Auth] No token found");
+      throw new Error("Не вдалося отримати токен авторизації");
+    }
     
     // Store user data with role (use roleHint if data.role is missing)
     const userData = { ...data, role: role };
     localStorage.setItem("unified_user", JSON.stringify(userData));
     queryClient.setQueryData(["/api/user"], userData);
     
+    // Redirect based on verified role
     if (role === "students" || role === "student") {
       setLocation("/student");
     } else if (role === "teachers" || role === "teacher") {
@@ -113,8 +154,10 @@ export function useTokenLogin() {
     } else if (role === "admins" || role === "admin") {
       setLocation("/dashboard");
     } else {
-      console.warn("[Auth] Unknown or missing role, defaulting to dashboard:", role);
-      setLocation("/dashboard");
+      console.warn("[Auth] Unknown role, redirecting to login:", role);
+      localStorage.removeItem("unified_token");
+      localStorage.removeItem("unified_user");
+      throw new Error(`Невідома роль користувача: ${role}`);
     }
   };
 
@@ -152,6 +195,14 @@ export function useTokenLogin() {
         }
 
         const data = (await res.json()) as AuthResponse;
+        
+        // Validate response - need either role from data or from hint
+        const responseRole = extractRole(data);
+        if (!responseRole && !roleHint) {
+          console.error("[Auth] Token login response missing role and no hint provided");
+          throw new Error("Сервер не повернув роль користувача");
+        }
+        
         console.log("[Auth] Token login successful, data:", data);
         return { data, token, roleHint };
       } catch (error: any) {

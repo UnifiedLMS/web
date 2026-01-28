@@ -17,6 +17,7 @@ import Spreadsheet from "@/pages/Spreadsheet";
 import Users from "@/pages/Users";
 import Students from "@/pages/Students";
 import Teachers from "@/pages/Teachers";
+import Schedule from "@/pages/Schedule";
 import NotFound from "@/pages/not-found";
 
 // Student Pages
@@ -135,6 +136,11 @@ function Router() {
         <Route path="/teachers">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: "easeInOut" }}>
             <Teachers />
+          </motion.div>
+        </Route>
+        <Route path="/schedule">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: "easeInOut" }}>
+            <Schedule />
           </motion.div>
         </Route>
         <Route path="/settings">

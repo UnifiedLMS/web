@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -8,80 +8,17 @@ import { api } from "@shared/routes";
 import { useLogin, useTokenLogin } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Chrome, Eye, EyeOff, Loader2, ClipboardPaste, CheckCircle2, Moon, Sun } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Chrome, Eye, EyeOff, Loader2, Moon, Sun } from "lucide-react";
+import { motion } from "framer-motion";
 import { BackgroundAnimation } from "@/components/background-animation";
 import unifiedLogo from "@assets/unified_logo.png";
 import { useToast } from "@/hooks/use-toast";
 
-// Extract access_token and optionally role from JSON or URL-like string
-function extractTokenData(input: string): { token: string | null; role: string | null } {
-  const trimmed = input.trim();
-  let token: string | null = null;
-  let role: string | null = null;
-  
-  // Try parsing as JSON first
-  try {
-    const json = JSON.parse(trimmed);
-    if (json.access_token) {
-      token = json.access_token;
-    }
-    if (json.role) {
-      role = json.role;
-    }
-    if (token) {
-      return { token, role };
-    }
-  } catch {
-    // Not JSON, try other patterns
-  }
-  
-  // Try URL with access_token param
-  try {
-    const url = new URL(trimmed);
-    token = url.searchParams.get("access_token");
-    if (token) return { token, role: null };
-  } catch {
-    // Not a URL
-  }
-  
-  // Try finding access_token in query string format
-  const queryMatch = trimmed.match(/access_token=([^&\s"]+)/);
-  if (queryMatch) {
-    return { token: queryMatch[1], role: null };
-  }
-  
-  // Try finding it in JSON-like format without parsing
-  const jsonMatch = trimmed.match(/"access_token"\s*:\s*"([^"]+)"/);
-  if (jsonMatch) {
-    // Also try to find role
-    const roleMatch = trimmed.match(/"role"\s*:\s*"([^"]+)"/);
-    return { token: jsonMatch[1], role: roleMatch ? roleMatch[1] : null };
-  }
-  
-  // If it looks like a JWT token directly (starts with eyJ)
-  if (trimmed.startsWith("eyJ") && trimmed.split(".").length === 3) {
-    return { token: trimmed, role: null };
-  }
-  
-  return { token: null, role: null };
-}
-
-// For backward compatibility
-function extractAccessToken(input: string): string | null {
-  return extractTokenData(input).token;
-}
-
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [googleLoginPending, setGoogleLoginPending] = useState(false);
-  const [showTokenDialog, setShowTokenDialog] = useState(false);
-  const [manualTokenInput, setManualTokenInput] = useState("");
-  const [tokenInputValid, setTokenInputValid] = useState<boolean | null>(null);
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("theme") === "dark" || document.documentElement.classList.contains("dark");
@@ -92,9 +29,6 @@ export default function Login() {
   const loginMutation = useLogin();
   const tokenLoginMutation = useTokenLogin();
   const [, setLocation] = useLocation();
-  const popupRef = useRef<Window | null>(null);
-  const popupCheckIntervalRef = useRef<number | null>(null);
-  const popupOpenTimeRef = useRef<number>(0);
 
   const toggleTheme = () => {
     const newIsDark = !isDark;
@@ -130,33 +64,13 @@ export default function Login() {
 
   const resetGoogleState = useCallback(() => {
     setGoogleLoginPending(false);
-    setShowTokenDialog(false);
-    setManualTokenInput("");
-    setTokenInputValid(null);
-    popupRef.current = null;
-    if (popupCheckIntervalRef.current) {
-      window.clearInterval(popupCheckIntervalRef.current);
-      popupCheckIntervalRef.current = null;
-    }
   }, []);
 
-  const handleManualTokenSubmit = useCallback(() => {
-    const { token, role } = extractTokenData(manualTokenInput);
-    if (!token) {
-      setTokenInputValid(false);
-      toast({
-        variant: "destructive",
-        title: "Невірний формат",
-        description: "Не вдалося знайти токен. Скопіюйте весь текст зі сторінки Google.",
-      });
-      return;
-    }
+  // Handle OAuth token from redirect
+  const handleOAuthRedirect = useCallback((token: string, role?: string | null) => {
+    resetGoogleState();
 
-    setTokenInputValid(true);
-    setShowTokenDialog(false);
-    setGoogleLoginPending(false);
-    
-    // Pass role as hint in case server doesn't return it
+    // Pass role hint if available from the redirect
     tokenLoginMutation.mutate({ token, roleHint: role || undefined }, {
       onError: (err) => {
         toast({
@@ -164,78 +78,12 @@ export default function Login() {
           title: "Помилка входу через Google",
           description: err.message,
         });
-        resetGoogleState();
       },
     });
-  }, [manualTokenInput, tokenLoginMutation, toast, resetGoogleState]);
-
-  const handlePasteFromClipboard = useCallback(async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      setManualTokenInput(text);
-      // Auto-validate on paste
-      const { token, role } = extractTokenData(text);
-      setTokenInputValid(token !== null);
-      if (token) {
-        // Auto-submit on valid paste
-        setShowTokenDialog(false);
-        setGoogleLoginPending(false);
-        // Pass role as hint in case server doesn't return it
-        tokenLoginMutation.mutate({ token, roleHint: role || undefined }, {
-          onError: (err) => {
-            toast({
-              variant: "destructive",
-              title: "Помилка входу через Google",
-              description: err.message,
-            });
-            resetGoogleState();
-          },
-        });
-      }
-    } catch {
-      toast({
-        variant: "destructive",
-        title: "Буфер обміну недоступний",
-        description: "Вставте текст вручну (Ctrl+V).",
-      });
-    }
-  }, [tokenLoginMutation, toast, resetGoogleState]);
-
-  // Handle OAuth token from popup via postMessage
-  const handleOAuthMessage = useCallback((event: MessageEvent) => {
-    // Verify origin for security
-    if (event.origin !== window.location.origin) {
-      return;
-    }
-
-    const { type, token, role, error } = event.data || {};
-    
-    if (type === "oauth_complete" && token) {
-      resetGoogleState();
-
-      // Pass role hint if available from the popup
-      tokenLoginMutation.mutate({ token, roleHint: role || undefined }, {
-        onError: (err) => {
-          toast({
-            variant: "destructive",
-            title: "Помилка входу через Google",
-            description: err.message,
-          });
-        },
-      });
-    } else if (type === "oauth_error") {
-      resetGoogleState();
-      toast({
-        variant: "destructive",
-        title: "Помилка входу через Google",
-        description: error || "Не вдалося увійти через Google",
-      });
-    }
   }, [tokenLoginMutation, toast, resetGoogleState]);
 
   useEffect(() => {
-    // Check if this is a popup window that just completed OAuth
-    const isPopup = window.opener && window.opener !== window;
+    // Handle OAuth redirect - check for token in URL params or hash
     const url = new URL(window.location.href);
     const tokenFromQuery = url.searchParams.get("token") || url.searchParams.get("access_token");
     const roleFromQuery = url.searchParams.get("role") || url.searchParams.get("user_role");
@@ -251,46 +99,26 @@ export default function Login() {
     const oauthToken = tokenFromQuery || tokenFromHash;
     const oauthRole = roleFromQuery || roleFromHash;
 
-    // If we're in a popup with a token, send it to the opener and close
-    if (isPopup && oauthToken) {
-      try {
-        window.opener.postMessage(
-          { type: "oauth_complete", token: oauthToken, role: oauthRole },
-          window.location.origin
-        );
-      } catch (e) {
-        console.error("[OAuth] Failed to send message to opener:", e);
-      }
-      window.close();
-      return;
-    }
-
-    // If we're in a popup without a token (error case), notify opener and close
-    if (isPopup && url.searchParams.get("oauth_error")) {
-      try {
-        window.opener.postMessage(
-          { type: "oauth_error", error: "OAuth помилка від Google" },
-          window.location.origin
-        );
-      } catch (e) {
-        console.error("[OAuth] Failed to send error to opener:", e);
-      }
-      window.close();
-      return;
-    }
-
-    // If we're the main window with a token in URL (direct redirect fallback)
-    if (!isPopup && oauthToken) {
-      // Pass role hint if available from URL params
-      tokenLoginMutation.mutate({ token: oauthToken, roleHint: oauthRole || undefined }, {
-        onError: (error) => {
-          toast({
-            variant: "destructive",
-            title: "Помилка входу через Google",
-            description: error.message,
-          });
-        },
+    // Check for OAuth error
+    const oauthError = url.searchParams.get("oauth_error") || url.searchParams.get("error");
+    if (oauthError) {
+      toast({
+        variant: "destructive",
+        title: "Помилка входу через Google",
+        description: url.searchParams.get("error_description") || "Не вдалося увійти через Google",
       });
+      
+      // Clean up URL
+      url.searchParams.delete("oauth_error");
+      url.searchParams.delete("error");
+      url.searchParams.delete("error_description");
+      window.history.replaceState({}, document.title, url.toString());
+      return;
+    }
+
+    // If we have a token from redirect, process it
+    if (oauthToken) {
+      handleOAuthRedirect(oauthToken, oauthRole);
 
       // Clean up the URL
       url.searchParams.delete("token");
@@ -307,61 +135,14 @@ export default function Login() {
       }
       window.history.replaceState({}, document.title, url.toString());
     }
-  }, [tokenLoginMutation, toast]);
+  }, [handleOAuthRedirect, toast]);
 
-  // Listen for postMessage from popup
-  useEffect(() => {
-    window.addEventListener("message", handleOAuthMessage);
-    return () => {
-      window.removeEventListener("message", handleOAuthMessage);
-      // Cleanup interval on unmount
-      if (popupCheckIntervalRef.current) {
-        window.clearInterval(popupCheckIntervalRef.current);
-      }
-    };
-  }, [handleOAuthMessage]);
 
   const handleGoogleLogin = () => {
-    const popup = window.open(
-      api.auth.loginGoogle.path,
-      "googleLogin",
-      "width=520,height=680,scrollbars=yes,resizable=yes"
-    );
-
-    if (!popup) {
-      toast({
-        variant: "destructive",
-        title: "Спливаюче вікно заблоковано",
-        description: "Дозвольте спливаючі вікна для входу через Google.",
-      });
-      return;
-    }
-
-    popupRef.current = popup;
-    popupOpenTimeRef.current = Date.now();
+    // Redirect in the same window instead of opening a popup
+    // The Google OAuth will redirect back to this page with the token
     setGoogleLoginPending(true);
-    setManualTokenInput("");
-    setTokenInputValid(null);
-
-    // Monitor popup for closure
-    popupCheckIntervalRef.current = window.setInterval(() => {
-      if (popup.closed) {
-        if (popupCheckIntervalRef.current) {
-          window.clearInterval(popupCheckIntervalRef.current);
-          popupCheckIntervalRef.current = null;
-        }
-        popupRef.current = null;
-        
-        // If popup was open for more than 3 seconds (user likely went through OAuth)
-        // and we didn't receive a token via postMessage, show the manual entry dialog
-        const wasOpenLongEnough = Date.now() - popupOpenTimeRef.current > 3000;
-        if (wasOpenLongEnough && googleLoginPending) {
-          setShowTokenDialog(true);
-        } else {
-          setGoogleLoginPending(false);
-        }
-      }
-    }, 500);
+    window.location.href = api.auth.loginGoogle.path;
   };
 
   return (
@@ -381,75 +162,6 @@ export default function Login() {
         )}
       </button>
 
-      {/* Manual Token Entry Dialog */}
-      <Dialog open={showTokenDialog} onOpenChange={(open) => {
-        if (!open) {
-          resetGoogleState();
-        }
-      }}>
-        <DialogContent className="bg-[#1a1a1a] border-white/10 text-white sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">Завершення входу через Google</DialogTitle>
-            <DialogDescription className="text-white/60">
-              Скопіюйте весь текст зі сторінки Google (Ctrl+A, Ctrl+C) та вставте його нижче.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 mt-2">
-            <Textarea
-              placeholder='{"access_token":"eyJ...", "token_type":"bearer", ...}'
-              value={manualTokenInput}
-              onChange={(e) => {
-                setManualTokenInput(e.target.value);
-                const token = extractAccessToken(e.target.value);
-                setTokenInputValid(token !== null);
-              }}
-              className={`min-h-[100px] bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-primary/50 font-mono text-sm ${
-                tokenInputValid === false ? "border-red-500/50" : tokenInputValid === true ? "border-green-500/50" : ""
-              }`}
-            />
-            
-            <AnimatePresence>
-              {tokenInputValid === true && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="flex items-center gap-2 text-green-400 text-sm"
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  Токен знайдено
-                </motion.div>
-              )}
-            </AnimatePresence>
-            
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handlePasteFromClipboard}
-                className="flex-1 border-white/20 text-white hover:bg-white/10"
-              >
-                <ClipboardPaste className="mr-2 h-4 w-4" />
-                Вставити з буферу
-              </Button>
-              
-              <Button
-                type="button"
-                onClick={handleManualTokenSubmit}
-                disabled={!manualTokenInput.trim() || tokenLoginMutation.isPending}
-                className="flex-1 bg-primary hover:bg-primary/90"
-              >
-                {tokenLoginMutation.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                Увійти
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-      
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -560,8 +272,8 @@ export default function Login() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={googleLoginPending ? () => setShowTokenDialog(true) : handleGoogleLogin}
-                    disabled={loginMutation.isPending || tokenLoginMutation.isPending}
+                    onClick={handleGoogleLogin}
+                    disabled={loginMutation.isPending || tokenLoginMutation.isPending || googleLoginPending}
                     className="w-full border-border dark:border-white/20 text-foreground dark:text-white hover:bg-muted dark:hover:bg-white/10 h-12"
                   >
                     {googleLoginPending || tokenLoginMutation.isPending ? (
@@ -569,18 +281,8 @@ export default function Login() {
                     ) : (
                       <Chrome className="mr-2 h-5 w-5" />
                     )}
-                    {googleLoginPending ? "Завершити вхід вручну..." : tokenLoginMutation.isPending ? "Вхід..." : "Увійти через Google"}
+                    {tokenLoginMutation.isPending ? "Вхід..." : googleLoginPending ? "Перенаправлення..." : "Увійти через Google"}
                   </Button>
-                  
-                  {googleLoginPending && (
-                    <motion.p 
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="text-center text-muted-foreground dark:text-white/40 text-xs"
-                    >
-                      Завершіть вхід у спливаючому вікні, потім закрийте його
-                    </motion.p>
-                  )}
                 </div>
               </form>
             </Form>
