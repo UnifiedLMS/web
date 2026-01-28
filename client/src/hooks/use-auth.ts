@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { api, type LoginRequest, type AuthResponse, extractRole, extractToken } from "@shared/routes";
+import { api } from "@shared/routes";
+import { type LoginRequest, type AuthResponse, extractRole, extractToken } from "@shared/schema";
 import { queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 
