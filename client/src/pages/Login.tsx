@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isExchangingCode, setIsExchangingCode] = useState(false);
+  const [didTryCookieLogin, setDidTryCookieLogin] = useState(false);
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("theme") === "dark" || document.documentElement.classList.contains("dark");
@@ -140,6 +141,68 @@ export default function Login() {
         });
     }
   }, [tokenLoginMutation, toast, isExchangingCode]);
+
+  // Handle Google OAuth flow where API sets token in cookies and redirects back
+  useEffect(() => {
+    if (didTryCookieLogin || isExchangingCode) return;
+
+    // If there is still a ?code param, let the code-exchange flow handle it instead
+    const currentUrl = new URL(window.location.href);
+    const hasCode = !!currentUrl.searchParams.get("code");
+    if (hasCode) return;
+
+    const cookieString = document.cookie || "";
+    if (!cookieString) {
+      setDidTryCookieLogin(true);
+      return;
+    }
+
+    const cookieMap = cookieString.split(";").reduce<Record<string, string>>((acc, part) => {
+      const [rawKey, ...rest] = part.split("=");
+      if (!rawKey) return acc;
+      const key = rawKey.trim();
+      const value = rest.join("=").trim();
+      if (!key) return acc;
+      acc[key] = decodeURIComponent(value || "");
+      return acc;
+    }, {});
+
+    const possibleTokenKeys = [
+      "unified_token",
+      "access_token",
+      "token",
+      "auth_token",
+      "google_oauth_token",
+    ];
+
+    const tokenKey = possibleTokenKeys.find((key) => cookieMap[key]);
+    const tokenFromCookie = tokenKey ? cookieMap[tokenKey] : undefined;
+
+    if (!tokenFromCookie) {
+      setDidTryCookieLogin(true);
+      return;
+    }
+
+    const possibleRoleKeys = ["role", "user_role", "userRole", "unified_role"];
+    const roleKey = possibleRoleKeys.find((key) => cookieMap[key]);
+    const roleHint = roleKey ? cookieMap[roleKey] : undefined;
+
+    setDidTryCookieLogin(true);
+
+    tokenLoginMutation.mutate(
+      { token: tokenFromCookie, roleHint },
+      {
+        onError: (err) => {
+          console.error("[OAuth] Cookie token login error:", err);
+          toast({
+            variant: "destructive",
+            title: "Помилка входу через Google",
+            description: err.message || "Не вдалося увійти за токеном з cookies",
+          });
+        },
+      }
+    );
+  }, [didTryCookieLogin, isExchangingCode, tokenLoginMutation, toast]);
 
   const handleGoogleLogin = () => {
     // Redirect to Google auth - API will redirect back with token
