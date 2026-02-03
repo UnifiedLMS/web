@@ -6,6 +6,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCheckToken } from "@/hooks/use-auth";
+import { extractRole } from "@shared/schema";
+import { getTokenFromCookie, clearAuthCookies } from "@/lib/cookieUtils";
+import { useEndpointNotifications } from "@/lib/endpoint-tracker";
+import { DeveloperProvider } from "@/contexts/developer-context";
 import unifiedLogo from "@assets/unified_logo.png";
 
 // Pages
@@ -208,6 +212,9 @@ function AppContent() {
   const [tokenChecked, setTokenChecked] = useState(false);
   const [, setLocation] = useLocation();
   const checkTokenMutation = useCheckToken();
+  
+  // Set up endpoint notifications listener
+  useEndpointNotifications();
 
   useEffect(() => {
     // 1. Initial theme and color setup from local storage
@@ -247,17 +254,16 @@ function AppContent() {
     }
 
     // 2. Start token check immediately
-    const token = localStorage.getItem("unified_token");
+    const token = getTokenFromCookie();
     
     const checkAuth = async (): Promise<{ valid: boolean; role?: string }> => {
       if (token) {
         try {
           const data = await checkTokenMutation.mutateAsync(token);
-          // Token valid - return role for redirect
-          return { valid: true, role: data.role };
+          const role = extractRole(data);
+          return { valid: true, role };
         } catch (e) {
-          // Token invalid
-          localStorage.removeItem("unified_token");
+          clearAuthCookies();
           return { valid: false };
         }
       }
@@ -277,14 +283,15 @@ function AppContent() {
       setTimeout(() => {
         setShowEntry(false);
         if (authResult.valid) {
-          // Redirect based on role
           const role = authResult.role;
           if (role === "students" || role === "student") {
             setLocation("/student");
           } else if (role === "teachers" || role === "teacher") {
             setLocation("/teacher");
-          } else {
+          } else if (role === "admins" || role === "admin") {
             setLocation("/dashboard");
+          } else {
+            setLocation("/login");
           }
         } else {
           setLocation("/login");
@@ -316,12 +323,14 @@ function AppContent() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <AppContent />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <DeveloperProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <AppContent />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </DeveloperProvider>
   );
 }
 

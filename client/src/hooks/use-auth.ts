@@ -3,6 +3,7 @@ import { api } from "@shared/routes";
 import { type LoginRequest, type AuthResponse, extractRole, extractToken } from "@shared/schema";
 import { queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
+import { getTokenFromCookie, getRoleFromCookie, setAuthCookies, clearAuthCookies } from "@/lib/cookieUtils";
 
 // Helper to update CSS variable for primary color
 export function setPrimaryColor(color: string) {
@@ -26,9 +27,9 @@ export function useLogin() {
       throw new Error("Не вдалося визначити роль користувача");
     }
     
-    // Store token only after validation
+    // Store token and role in cookies only after validation
     if (tokenToStore) {
-      localStorage.setItem("unified_token", tokenToStore);
+      setAuthCookies(tokenToStore, role);
     } else {
       console.error("[Auth] No token found in response");
       throw new Error("Не вдалося отримати токен авторизації");
@@ -36,7 +37,6 @@ export function useLogin() {
     
     // Store user data with normalized role
     const userData = { ...data, role: role };
-    localStorage.setItem("unified_user", JSON.stringify(userData));
     queryClient.setQueryData(["/api/user"], userData);
 
     // Redirect based on verified role
@@ -48,8 +48,7 @@ export function useLogin() {
       setLocation("/dashboard");
     } else {
       console.warn("[Auth] Unknown role, redirecting to login:", role);
-      localStorage.removeItem("unified_token");
-      localStorage.removeItem("unified_user");
+      clearAuthCookies();
       throw new Error(`Невідома роль користувача: ${role}`);
     }
   };
@@ -134,9 +133,11 @@ export function useTokenLogin() {
       throw new Error("Не вдалося визначити роль користувача");
     }
     
-    // Store token only after validation
+    // Store token and role in cookies only after validation
     if (tokenToStore) {
-      localStorage.setItem("unified_token", tokenToStore);
+      console.log("[Auth] Storing token in cookies for token login:", tokenToStore.substring(0, 20) + "...");
+      setAuthCookies(tokenToStore, role);
+      console.log("[Auth] Cookies set successfully for token login");
     } else {
       console.error("[Auth] No token found");
       throw new Error("Не вдалося отримати токен авторизації");
@@ -144,7 +145,6 @@ export function useTokenLogin() {
     
     // Store user data with role (use roleHint if data.role is missing)
     const userData = { ...data, role: role };
-    localStorage.setItem("unified_user", JSON.stringify(userData));
     queryClient.setQueryData(["/api/user"], userData);
     
     // Redirect based on verified role
@@ -156,8 +156,7 @@ export function useTokenLogin() {
       setLocation("/dashboard");
     } else {
       console.warn("[Auth] Unknown role, redirecting to login:", role);
-      localStorage.removeItem("unified_token");
-      localStorage.removeItem("unified_user");
+      clearAuthCookies();
       throw new Error(`Невідома роль користувача: ${role}`);
     }
   };
@@ -167,7 +166,7 @@ export function useTokenLogin() {
       const token = typeof input === "string" ? input : input.token;
       const roleHint = typeof input === "string" ? undefined : input.roleHint;
       try {
-        console.log("[Auth] Attempting token login, roleHint:", roleHint);
+        console.log("[Auth] Attempting token login with token:", token.substring(0, 20) + "..., roleHint:", roleHint);
         const controller = new AbortController();
         const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
         const res = await fetch(api.auth.checkToken.path, {
@@ -268,7 +267,10 @@ export function useCheckToken() {
       const newToken = extractToken(data);
       if (newToken) {
         console.log("[Auth] New token received, updating stored token");
-        localStorage.setItem("unified_token", newToken);
+        const role = getRoleFromCookie();
+        if (role) {
+          setAuthCookies(newToken, role);
+        }
       }
       
       // Normalize role from various possible field names
@@ -276,7 +278,6 @@ export function useCheckToken() {
       console.log("[Auth] Token check role:", role);
       
       const userData = { ...data, role: role };
-      localStorage.setItem("unified_user", JSON.stringify(userData));
       queryClient.setQueryData(["/api/user"], userData);
     }
   });
@@ -286,8 +287,14 @@ export function useUser() {
   return useQuery<AuthResponse | null>({
     queryKey: ["/api/user"],
     queryFn: () => {
-      const saved = localStorage.getItem("unified_user");
-      return saved ? JSON.parse(saved) : null;
+      const token = getTokenFromCookie();
+      if (!token) return null;
+      
+      // Build minimal user object from cookies
+      const role = getRoleFromCookie();
+      if (!role) return null;
+      
+      return { role };
     },
     staleTime: Infinity,
   });
@@ -298,18 +305,17 @@ export function useLogout() {
   const { data: user } = useUser();
 
   const logout = async () => {
-    const token = localStorage.getItem("unified_token");
+    const token = getTokenFromCookie();
     if (token) {
       try {
         console.log("[Auth] Attempting logout");
         // Note: Logout endpoint might need special handling, but for now we'll just log
-        // The logout is mostly client-side anyway (clearing local storage)
+        // The logout is mostly client-side anyway (clearing cookies)
       } catch (e) {
         console.error("[Auth] Logout request failed:", e);
       }
     }
-    localStorage.removeItem("unified_token");
-    localStorage.removeItem("unified_user");
+    clearAuthCookies();
     queryClient.setQueryData(["/api/user"], null);
     setLocation("/login");
   };

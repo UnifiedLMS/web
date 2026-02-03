@@ -84,65 +84,24 @@ export default function TeacherGrades() {
     staleTime: 10 * 60 * 1000,
   });
 
-  // Fetch assigned disciplines for selected group
+  // Fetch assigned disciplines for selected group (uses apiFetch → token always sent)
   const { data: disciplines, isLoading: disciplinesLoading } = useQuery<string[]>({
     queryKey: ["teacher-disciplines", selectedGroupEn],
-    queryFn: async () => {
-      const response = await apiFetch<string[]>(`/api/v1/teachers/assigned/${selectedGroupEn}/disciplines`);
-      return response;
-    },
+    queryFn: () => apiFetch<string[]>(`/api/v1/teachers/assigned/${selectedGroupEn}/disciplines`),
     enabled: !!selectedGroupEn,
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch student assessments
+  // Fetch student assessments (use apiFetch so token is always sent)
   const { data: assessments, isLoading: assessmentsLoading, refetch: refetchAssessments } = useQuery<StudentAssessment[]>({
     queryKey: ["teacher-assessments", selectedGroupEn, selectedDiscipline],
     queryFn: async () => {
-      console.log(`[TeacherGrades] Fetching assessments for group ${selectedGroupEn}, discipline: ${selectedDiscipline}`);
-      
-      // Make the POST request with discipline in body
-      // The API expects: Content-Type: application/json with body: "Програмування" (JSON string)
-      const url = `${window.location.origin}/api/proxy/api/v1/students/${selectedGroupEn}/assesment/all`;
-      const token = localStorage.getItem("unified_token");
-      
-      // Normalize wrapped quotes from API values, then encode as JSON string
       const normalizedDiscipline = selectedDiscipline.replace(/^"+|"+$/g, "");
-      const bodyContent = JSON.stringify(normalizedDiscipline);
-      console.log(`[TeacherGrades] Sending body:`, bodyContent);
-      
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
-        },
-        body: bodyContent,
-      });
-      
-      console.log(`[TeacherGrades] Response status: ${response.status}`);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[TeacherGrades] Error response:`, errorText);
-        throw new Error(`Помилка завантаження оцінок: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log(`[TeacherGrades] Response data type:`, typeof data, Array.isArray(data) ? `Array(${data.length})` : "");
-      
-      // Handle case where API returns a string instead of array
-      if (typeof data === "string") {
-        console.warn(`[TeacherGrades] API returned string instead of array:`, data);
-        return [];
-      }
-      
-      // Ensure we always return an array
-      if (!Array.isArray(data)) {
-        console.warn(`[TeacherGrades] API returned non-array:`, data);
-        return [];
-      }
-      
+      const data = await apiFetch<StudentAssessment[] | string>(
+        `/api/v1/students/${selectedGroupEn}/assesment/all`,
+        { method: "POST", body: JSON.stringify(normalizedDiscipline) }
+      );
+      if (typeof data === "string" || !Array.isArray(data)) return [];
       return data;
     },
     enabled: !!selectedGroupEn && !!selectedDiscipline,

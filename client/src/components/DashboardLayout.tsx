@@ -5,6 +5,7 @@ import { LogOut, Settings, Home, Table2, Users, GraduationCap, BookOpen, Calenda
 import { motion, AnimatePresence } from "framer-motion";
 import unifiedLogo from "@assets/unified_logo.png";
 import { useLogout } from "@/hooks/use-auth";
+import { getTokenFromCookie, getRoleFromCookie } from "@/lib/cookieUtils";
 import {
   Sidebar,
   SidebarContent,
@@ -31,8 +32,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("unified_token");
-    if (!token) setLocation("/login");
+    const token = getTokenFromCookie();
+    if (!token) {
+      setLocation("/login");
+      return;
+    }
+    const role = getRoleFromCookie();
+    const isAdmin = role === "admin" || role === "admins";
+    if (!isAdmin) {
+      if (role === "student" || role === "students") setLocation("/student");
+      else if (role === "teacher" || role === "teachers") setLocation("/teacher");
+      else setLocation("/login");
+    }
   }, [location, setLocation]);
 
   const handleLogout = async () => {

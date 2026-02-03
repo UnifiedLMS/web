@@ -8,10 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { getTokenFromCookie } from "@/lib/cookieUtils";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { Search, UserSearch, Edit, Trash2, Loader2 } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, getAuthHeaders } from "@/lib/api";
 import { DashboardLayout } from "@/components/DashboardLayout";
 
 const userSchema = z.object({
@@ -204,17 +205,18 @@ export default function Users() {
     setIsRoleSearching(true);
     try {
       // For role search, use /api/v1/users/{role}/all endpoint
-      const token = localStorage.getItem("unified_token");
-      const url = `/api/proxy/api/v1/users/${encodeURIComponent(roleSearchQuery)}/all`;
+      console.log(`[Users] Role search: /api/v1/users/${roleSearchQuery}/all`);
       
-      console.log(`[Users] Role search: ${url}`);
+      const headers = getAuthHeaders();
+      console.log("[Users] Auth headers being sent:", {
+        hasAuthHeader: !!headers["Authorization"],
+        authHeaderValue: headers["Authorization"] ? headers["Authorization"].substring(0, 20) + "..." : "MISSING",
+        contentType: headers["Content-Type"],
+      });
       
-      const response = await fetch(url, {
+      const response = await fetch(`/api/proxy/api/v1/users/${encodeURIComponent(roleSearchQuery)}/all`, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": token ? `Bearer ${token}` : "",
-        },
+        headers: headers,
       });
 
       // Try to parse response - even if status is 422, the body might contain valid array data

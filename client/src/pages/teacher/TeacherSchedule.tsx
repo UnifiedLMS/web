@@ -65,6 +65,7 @@ export default function TeacherSchedule() {
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [selectedLesson, setSelectedLesson] = useState<TeacherLesson | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isViewMode, setIsViewMode] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -73,6 +74,15 @@ export default function TeacherSchedule() {
     const trimmed = value.trim();
     if (!trimmed) return "";
     if (trimmed.toLowerCase() === "homework") return "";
+    return trimmed;
+  };
+
+  const normalizeTopic = (value?: string) => {
+    if (!value) return "";
+    const trimmed = value.trim();
+    if (!trimmed) return "";
+    const lower = trimmed.toLowerCase();
+    if (lower === "topic" || lower === "lesson" || lower === "—" || lower === "homework") return "";
     return trimmed;
   };
 
@@ -186,16 +196,21 @@ export default function TeacherSchedule() {
     return times[lesson.position] || "—";
   };
 
-  const navigateMonth = (direction: number) => {
-    setCurrentMonth(direction > 0 ? addMonths(currentMonth, 1) : subMonths(currentMonth, 1));
-  };
+
 
   const openEditDialog = (lesson: TeacherLesson) => {
     setSelectedLesson(lesson);
+    setIsViewMode(false);
     editForm.reset({
-      topic: lesson.topic || "",
+      topic: normalizeTopic(lesson.topic) || "",
       homework: normalizeHomework(lesson.homework),
     });
+    setIsEditMode(true);
+  };
+
+  const openViewDialog = (lesson: TeacherLesson) => {
+    setSelectedLesson(lesson);
+    setIsViewMode(true);
     setIsEditMode(true);
   };
 
@@ -252,20 +267,7 @@ export default function TeacherSchedule() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Calendar */}
               <Card className="lg:col-span-1">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <Button variant="ghost" size="icon" onClick={() => navigateMonth(-1)}>
-                      <ChevronLeft className="w-4 h-4" />
-                    </Button>
-                    <CardTitle className="text-lg">
-                      {format(currentMonth, "LLLL yyyy", { locale: uk })}
-                    </CardTitle>
-                    <Button variant="ghost" size="icon" onClick={() => navigateMonth(1)}>
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
+                <CardContent className="pt-6">
                   <Calendar
                     mode="single"
                     selected={selectedDate}
@@ -320,19 +322,24 @@ export default function TeacherSchedule() {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <AnimatePresence>
+                        <AnimatePresence mode="popLayout">
                           {selectedDateLessons.map((lesson, index) => (
                             <motion.div
-                              key={`${lesson.position}-${lesson.subject}-${lesson.group.en}`}
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              exit={{ opacity: 0, x: 20 }}
-                              transition={{ duration: 0.2, delay: index * 0.05, ease: "easeInOut" }}
+                              key={`${format(selectedDate, "yyyy-MM-dd")}-${lesson.position}-${lesson.subject}`}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              transition={{ duration: 0.15, delay: index * 0.03, ease: [0.25, 0.1, 0.25, 1] }}
+                              layout
+                              style={{ willChange: "transform, opacity" }}
                             >
                               {(() => {
                                 const homeworkText = normalizeHomework(lesson.homework);
                                 return (
-                              <Card className="hover:shadow-md hover:border-primary/30 transition-all duration-200">
+                              <Card 
+                                className="cursor-pointer hover:shadow-md hover:border-primary/30 transition-all duration-200"
+                                onClick={() => openViewDialog(lesson)}
+                              >
                                 <CardContent className="p-4">
                                   <div className="flex items-start gap-4">
                                     {/* Lesson Number */}
@@ -344,14 +351,6 @@ export default function TeacherSchedule() {
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-start justify-between gap-2">
                                         <h4 className="font-semibold truncate">{lesson.subject}</h4>
-                                        <Button 
-                                          variant="ghost" 
-                                          size="sm"
-                                          onClick={() => openEditDialog(lesson)}
-                                        >
-                                          <Edit className="w-4 h-4 mr-1" />
-                                          Редагувати
-                                        </Button>
                                       </div>
                                       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">
                                         <span className="flex items-center gap-1">
@@ -369,10 +368,10 @@ export default function TeacherSchedule() {
                                           </span>
                                         )}
                                       </div>
-                                      {lesson.topic && (
+                                      {normalizeTopic(lesson.topic) && (
                                         <div className="mt-2 flex items-start gap-1 text-sm">
                                           <BookOpen className="w-3 h-3 mt-0.5 text-primary" />
-                                          <span className="text-muted-foreground">{lesson.topic}</span>
+                                          <span className="text-muted-foreground">{normalizeTopic(lesson.topic)}</span>
                                         </div>
                                       )}
                                       {homeworkText && (
@@ -471,10 +470,10 @@ export default function TeacherSchedule() {
                                             </span>
                                           )}
                                         </div>
-                                        {lesson.topic && (
+                                        {normalizeTopic(lesson.topic) && (
                                           <div className="mt-2 flex items-start gap-1 text-sm">
                                             <BookOpen className="w-3 h-3 mt-0.5 text-primary" />
-                                            <span className="text-muted-foreground">{lesson.topic}</span>
+                                            <span className="text-muted-foreground">{normalizeTopic(lesson.topic)}</span>
                                           </div>
                                         )}
                                         {homeworkText && (
@@ -502,15 +501,24 @@ export default function TeacherSchedule() {
           )}
         </motion.div>
 
-        {/* Edit Lesson Dialog */}
-        <Dialog open={isEditMode} onOpenChange={setIsEditMode}>
+        {/* Lesson Dialog (View or Edit) */}
+        <Dialog open={isEditMode} onOpenChange={(open) => { setIsEditMode(open); if (!open) setIsViewMode(false); }}>
           <DialogContent className="max-w-lg">
             {selectedLesson && (
               <>
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
-                    <Edit className="w-5 h-5" />
-                    Редагування заняття
+                    {isViewMode ? (
+                      <>
+                        <BookOpen className="w-5 h-5" />
+                        Деталі заняття
+                      </>
+                    ) : (
+                      <>
+                        <Edit className="w-5 h-5" />
+                        Редагування заняття
+                      </>
+                    )}
                   </DialogTitle>
                 </DialogHeader>
                 
@@ -533,66 +541,112 @@ export default function TeacherSchedule() {
                     </div>
                   </div>
 
-                  {/* Edit Form */}
-                  <Form {...editForm}>
-                    <form onSubmit={editForm.handleSubmit(handleSaveLesson)} className="space-y-4">
-                      <FormField
-                        control={editForm.control}
-                        name="topic"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
+                  {isViewMode ? (
+                    /* View Mode */
+                    <div className="space-y-4">
+                      {/* Topic */}
+                      {(() => {
+                        const topicText = normalizeTopic(selectedLesson.topic);
+                        if (!topicText) return null;
+                        return (
+                          <div className="p-3 rounded-lg bg-muted/50">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                               <BookOpen className="w-4 h-4" />
                               Тема заняття
-                            </FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="Введіть тему заняття..." 
-                                className="resize-none"
-                                rows={3}
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={editForm.control}
-                        name="homework"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
+                            </div>
+                            <p>{topicText}</p>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Homework */}
+                      {(() => {
+                        const homeworkText = normalizeHomework(selectedLesson.homework);
+                        if (!homeworkText) return null;
+                        return (
+                          <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                            <div className="flex items-center gap-2 text-xs text-primary mb-1">
                               <FileText className="w-4 h-4" />
                               Домашнє завдання
-                            </FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="Введіть домашнє завдання..." 
-                                className="resize-none"
-                                rows={3}
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => setIsEditMode(false)}>
-                          Скасувати
-                        </Button>
-                        <Button type="submit" disabled={updateLessonMutation.isPending}>
-                          {updateLessonMutation.isPending ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          ) : (
-                            <Save className="w-4 h-4 mr-2" />
+                            </div>
+                            <p>{homeworkText}</p>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  ) : (
+                    /* Edit Mode */
+                    <Form {...editForm}>
+                      <form onSubmit={editForm.handleSubmit(handleSaveLesson)} className="space-y-4">
+                        <FormField
+                          control={editForm.control}
+                          name="topic"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="flex items-center gap-2">
+                                <BookOpen className="w-4 h-4" />
+                                Тема заняття
+                              </FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  className="resize-none"
+                                  rows={3}
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
                           )}
-                          Зберегти
-                        </Button>
-                      </DialogFooter>
-                    </form>
-                  </Form>
+                        />
+                        <FormField
+                          control={editForm.control}
+                          name="homework"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="flex items-center gap-2">
+                                <FileText className="w-4 h-4" />
+                                Домашнє завдання
+                              </FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  placeholder="Введіть домашнє завдання..." 
+                                  className="resize-none"
+                                  rows={3}
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <DialogFooter>
+                          <Button type="button" variant="outline" onClick={() => setIsEditMode(false)}>
+                            Скасувати
+                          </Button>
+                          <Button type="submit" disabled={updateLessonMutation.isPending}>
+                            {updateLessonMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <Save className="w-4 h-4 mr-2" />
+                            )}
+                            Зберегти
+                          </Button>
+                        </DialogFooter>
+                      </form>
+                    </Form>
+                  )}
+                  
+                  {isViewMode && (
+                    <DialogFooter>
+                      <Button type="button" variant="outline" onClick={() => setIsEditMode(false)}>
+                        Закрити
+                      </Button>
+                      <Button onClick={() => setIsViewMode(false)}>
+                        <Edit className="w-4 h-4 mr-2" />
+                        Редагувати
+                      </Button>
+                    </DialogFooter>
+                  )}
                 </div>
               </>
             )}

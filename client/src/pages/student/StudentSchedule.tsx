@@ -217,9 +217,7 @@ export default function StudentSchedule() {
     return `${teacher.last_name} ${teacher.first_name?.[0] || ""}.${teacher.middle_name?.[0] || ""}.`;
   };
 
-  const navigateMonth = (direction: number) => {
-    setCurrentMonth(direction > 0 ? addMonths(currentMonth, 1) : subMonths(currentMonth, 1));
-  };
+
 
   return (
     <StudentLayout>
@@ -261,20 +259,7 @@ export default function StudentSchedule() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Calendar / Date Selection */}
               <Card className="lg:col-span-1">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <Button variant="ghost" size="icon" onClick={() => navigateMonth(-1)}>
-                      <ChevronLeft className="w-4 h-4" />
-                    </Button>
-                    <CardTitle className="text-lg">
-                      {format(currentMonth, "LLLL yyyy", { locale: uk })}
-                    </CardTitle>
-                    <Button variant="ghost" size="icon" onClick={() => navigateMonth(1)}>
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
+                <CardContent className="pt-6">
                   <Calendar
                     mode="single"
                     selected={selectedDate}

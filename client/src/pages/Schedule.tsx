@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { getTokenFromCookie } from "@/lib/cookieUtils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -143,6 +144,15 @@ export default function Schedule() {
     return trimmed;
   };
 
+  const normalizeTopic = (value?: string) => {
+    if (!value) return "";
+    const trimmed = value.trim();
+    if (!trimmed) return "";
+    const lower = trimmed.toLowerCase();
+    if (lower === "topic" || lower === "lesson" || lower === "—" || lower === "homework") return "";
+    return trimmed;
+  };
+
   // Forms
   const editForm = useForm<z.infer<typeof lessonEditSchema>>({
     resolver: zodResolver(lessonEditSchema),
@@ -198,32 +208,20 @@ export default function Schedule() {
   const { data: assessments, isLoading: assessmentsLoading, refetch: refetchAssessments } = useQuery<StudentAssessment[]>({
     queryKey: ["admin-assessments", gradesGroupEn, selectedDiscipline],
     queryFn: async () => {
-      const url = `${window.location.origin}/api/proxy/api/v1/students/${gradesGroupEn}/assesment/all`;
-      const token = localStorage.getItem("unified_token");
-      
       const normalizedDiscipline = selectedDiscipline.replace(/^"+|"+$/g, "");
-      const bodyContent = JSON.stringify(normalizedDiscipline);
-      
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
-        },
-        body: bodyContent,
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Помилка завантаження оцінок: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      if (typeof data === "string" || !Array.isArray(data)) {
+      try {
+        const data = await apiFetch<StudentAssessment[]>(
+          `/api/v1/students/${gradesGroupEn}/assesment/all`,
+          {
+            method: "POST",
+            body: JSON.stringify(normalizedDiscipline),
+          }
+        );
+        return Array.isArray(data) ? data : [];
+      } catch (error) {
+        console.error("[Schedule] Assessment fetch error:", error);
         return [];
       }
-      
-      return data;
     },
     enabled: !!gradesGroupEn && !!selectedDiscipline,
     staleTime: 2 * 60 * 1000,
@@ -440,9 +438,7 @@ export default function Schedule() {
     return times[lesson.position] || "—";
   };
 
-  const navigateMonth = (direction: number) => {
-    setCurrentMonth(direction > 0 ? addMonths(currentMonth, 1) : subMonths(currentMonth, 1));
-  };
+
 
   const openEditDialog = (lesson: Lesson) => {
     setSelectedLesson(lesson);
@@ -702,6 +698,7 @@ export default function Schedule() {
 
   const renderLessonCard = (lesson: Lesson, index: number, showDate = false) => {
     const homeworkText = normalizeHomework(lesson.homework);
+    const topicText = normalizeTopic(lesson.topic);
     return (
       <motion.div
         key={`${lesson.position}-${lesson.subject}-${lesson.group.en}-${lesson.date}`}
@@ -710,7 +707,10 @@ export default function Schedule() {
         exit={{ opacity: 0, x: 20 }}
         transition={{ duration: 0.2, delay: index * 0.05, ease: "easeInOut" }}
       >
-        <Card className="hover:shadow-md hover:border-primary/30 transition-all duration-200">
+        <Card 
+          className="cursor-pointer hover:shadow-md hover:border-primary/30 transition-all duration-200"
+          onClick={() => openEditDialog(lesson)}
+        >
           <CardContent className="p-4">
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
@@ -720,11 +720,14 @@ export default function Schedule() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
                   <h4 className="font-semibold truncate">{lesson.subject}</h4>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                     <Button 
                       variant="ghost" 
                       size="sm"
-                      onClick={() => openEditDialog(lesson)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditDialog(lesson);
+                      }}
                     >
                       <Edit className="w-4 h-4 mr-1" />
                       Редагувати
@@ -733,7 +736,10 @@ export default function Schedule() {
                       variant="ghost" 
                       size="sm"
                       className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => setDeleteConfirmLesson(lesson)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteConfirmLesson(lesson);
+                      }}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -761,10 +767,10 @@ export default function Schedule() {
                     </span>
                   )}
                 </div>
-                {lesson.topic && (
+                {topicText && (
                   <div className="mt-2 flex items-start gap-1 text-sm">
                     <BookOpen className="w-3 h-3 mt-0.5 text-primary" />
-                    <span className="text-muted-foreground">{lesson.topic}</span>
+                    <span className="text-muted-foreground">{topicText}</span>
                   </div>
                 )}
                 {homeworkText && (
@@ -890,20 +896,7 @@ export default function Schedule() {
               ) : viewMode === "calendar" ? (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <Card className="lg:col-span-1">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <Button variant="ghost" size="icon" onClick={() => navigateMonth(-1)}>
-                          <ChevronLeft className="w-4 h-4" />
-                        </Button>
-                        <CardTitle className="text-lg">
-                          {format(currentMonth, "LLLL yyyy", { locale: uk })}
-                        </CardTitle>
-                        <Button variant="ghost" size="icon" onClick={() => navigateMonth(1)}>
-                          <ChevronRight className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-6">
                       <Calendar
                         mode="single"
                         selected={selectedDate}

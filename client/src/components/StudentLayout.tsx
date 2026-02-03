@@ -5,6 +5,7 @@ import { LogOut, Settings, Home, Calendar, BookOpen, ChevronLeft, ChevronRight }
 import { motion, AnimatePresence } from "framer-motion";
 import unifiedLogo from "@assets/unified_logo.png";
 import { useLogout } from "@/hooks/use-auth";
+import { getTokenFromCookie, getRoleFromCookie } from "@/lib/cookieUtils";
 import {
   Sidebar,
   SidebarContent,
@@ -31,18 +32,20 @@ export function StudentLayout({ children }: StudentLayoutProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("unified_token");
-    const userData = localStorage.getItem("unified_user");
+    const token = getTokenFromCookie();
     if (!token) {
+      console.warn("[StudentLayout] No token found, redirecting to login");
       setLocation("/login");
       return;
     }
+    console.log("[StudentLayout] Token found:", token.substring(0, 20) + "...");
+    
     // Verify role (accept both singular and plural forms)
-    if (userData) {
-      const parsed = JSON.parse(userData);
-      if (parsed.role !== "students" && parsed.role !== "student") {
-        setLocation("/login");
-      }
+    const role = getRoleFromCookie();
+    console.log("[StudentLayout] Role:", role);
+    if (role !== "students" && role !== "student") {
+      console.warn("[StudentLayout] Invalid role, redirecting to login:", role);
+      setLocation("/login");
     }
   }, [location, setLocation]);
 

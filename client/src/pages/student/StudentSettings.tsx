@@ -17,6 +17,7 @@ import unifiedLogo from "@assets/unified_logo.png";
 import { apiFetch } from "@/lib/api";
 import { StudentLayout } from "@/components/StudentLayout";
 import { useLogout } from "@/hooks/use-auth";
+import { useDeveloperMode } from "@/contexts/developer-context";
 
 const emailSchema = z.object({
   email: z.string().email("Введіть коректний email"),
@@ -62,6 +63,7 @@ export default function StudentSettings() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const { toast } = useToast();
   const { logout } = useLogout();
+  const { isDeveloperMode, showEndpointLabels, showEndpointPopups, toggleDeveloperMode, toggleEndpointLabels, toggleEndpointPopups } = useDeveloperMode();
 
   const emailForm = useForm<z.infer<typeof emailSchema>>({
     resolver: zodResolver(emailSchema),
@@ -366,6 +368,78 @@ export default function StudentSettings() {
                     Розроблено для забезпечення сучасного та зручного навчального процесу.
                   </p>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Developer Mode */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Режим розробника</CardTitle>
+                <CardDescription>
+                  Інструменти для налагодження та розробки
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="dev-mode-toggle" className="text-base">
+                      Активувати режим розробника
+                    </Label>
+                    <div className="text-sm text-muted-foreground">
+                      Включити інструменти розробника
+                    </div>
+                  </div>
+                  <Switch 
+                    id="dev-mode-toggle"
+                    checked={isDeveloperMode}
+                    onCheckedChange={toggleDeveloperMode}
+                  />
+                </div>
+
+                {isDeveloperMode && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-4 pt-4 border-t"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="endpoint-labels" className="text-base">
+                          Показувати назви API
+                        </Label>
+                        <div className="text-sm text-muted-foreground">
+                          Відображати API endpoint'и біля кнопок
+                        </div>
+                      </div>
+                      <Switch 
+                        id="endpoint-labels"
+                        checked={showEndpointLabels}
+                        onCheckedChange={toggleEndpointLabels}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="endpoint-popups" className="text-base">
+                          Повідомлення про запити
+                        </Label>
+                        <div className="text-sm text-muted-foreground">
+                          Показувати вспливаючі вікна для кожного API запиту
+                        </div>
+                      </div>
+                      <Switch 
+                        id="endpoint-popups"
+                        checked={showEndpointPopups}
+                        onCheckedChange={toggleEndpointPopups}
+                      />
+                    </div>
+
+                    <div className="rounded-lg bg-primary/5 border border-primary/20 p-3 text-sm text-muted-foreground">
+                      💡 <strong>Порада:</strong> Ці параметри зберігаються локально у вашому браузері. Деактивуйте режим розробника перед виходом.
+                    </div>
+                  </motion.div>
+                )}
               </CardContent>
             </Card>
 

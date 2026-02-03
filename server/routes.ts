@@ -204,6 +204,7 @@ export async function registerRoutes(
 
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
+        "accept": "application/json",
       };
 
       // Forward authorization header - Express lowercases header names, so check both
@@ -211,16 +212,17 @@ export async function registerRoutes(
       if (authHeader) {
         // Extract token from "Bearer <token>" format
         let token = typeof authHeader === "string" ? authHeader : String(authHeader);
-        if (token.startsWith("Bearer ")) {
-          token = token.substring(7);
+        if (token.toLowerCase().startsWith("bearer ")) {
+          token = token.slice(7);
         }
+        token = token.trim();
         
-        // The external API uses access-token and token-type headers instead of Authorization
+        // External API: access-token = <token>, token-type = bearer; also Authorization: Bearer <token>
         headers["access-token"] = token;
         headers["token-type"] = "bearer";
-        // Also send standard Authorization header for compatibility
         headers["Authorization"] = `Bearer ${token}`;
         console.log(`[Proxy] Forwarding auth headers for ${url}`);
+        console.log(`[Proxy] Authorization token (first 20 chars): ${token.substring(0, 20)}...`);
       } else {
         console.warn(`[Proxy] No Authorization header found in request`);
         // Log available headers for debugging

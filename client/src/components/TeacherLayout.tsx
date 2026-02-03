@@ -5,6 +5,7 @@ import { LogOut, Settings, Home, Calendar, Table2, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import unifiedLogo from "@assets/unified_logo.png";
 import { useLogout } from "@/hooks/use-auth";
+import { getTokenFromCookie, getRoleFromCookie } from "@/lib/cookieUtils";
 import {
   Sidebar,
   SidebarContent,
@@ -31,18 +32,20 @@ export function TeacherLayout({ children }: TeacherLayoutProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("unified_token");
-    const userData = localStorage.getItem("unified_user");
+    const token = getTokenFromCookie();
     if (!token) {
+      console.warn("[TeacherLayout] No token found, redirecting to login");
       setLocation("/login");
       return;
     }
+    console.log("[TeacherLayout] Token found:", token.substring(0, 20) + "...");
+    
     // Verify role (accept both singular and plural forms)
-    if (userData) {
-      const parsed = JSON.parse(userData);
-      if (parsed.role !== "teachers" && parsed.role !== "teacher") {
-        setLocation("/login");
-      }
+    const role = getRoleFromCookie();
+    console.log("[TeacherLayout] Role:", role);
+    if (role !== "teachers" && role !== "teacher") {
+      console.warn("[TeacherLayout] Invalid role, redirecting to login:", role);
+      setLocation("/login");
     }
   }, [location, setLocation]);
 
