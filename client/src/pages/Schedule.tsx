@@ -191,7 +191,7 @@ export default function Schedule() {
   // Fetch schedule for selected group
   const { data: schedule, isLoading: scheduleLoading, error: scheduleError } = useQuery<Lesson[]>({
     queryKey: ["admin-schedule", selectedGroupEn],
-    queryFn: () => apiFetch<Lesson[]>(`/api/v1/schedule/${selectedGroupEn}`),
+    queryFn: () => apiFetch<Lesson[]>(`/api/v1/schedule/groups/${selectedGroupEn}`),
     enabled: !!selectedGroupEn,
     staleTime: 5 * 60 * 1000,
   });
@@ -230,8 +230,8 @@ export default function Schedule() {
   // Mutations
   const updateLessonMutation = useMutation({
     mutationFn: async ({ groupEn, lessonId, data }: { groupEn: string; lessonId: string; data: z.infer<typeof lessonEditSchema> }) => {
-      return apiFetch(`/api/v1/schedule/${groupEn}/${lessonId}/revision`, {
-        method: "PUT",
+      return apiFetch(`/api/v1/schedule/lessons/${lessonId}`, {
+        method: "PATCH",
         body: JSON.stringify(data),
       });
     },
@@ -276,7 +276,7 @@ export default function Schedule() {
         },
       };
 
-      return apiFetch("/api/v1/schedule", {
+      return apiFetch("/api/v1/schedule/lessons", {
         method: "POST",
         body: JSON.stringify(payload),
       });
@@ -294,7 +294,7 @@ export default function Schedule() {
 
   const deleteLessonMutation = useMutation({
     mutationFn: async ({ groupEn, lessonId }: { groupEn: string; lessonId: string }) => {
-      return apiFetch(`/api/v1/schedule/${groupEn}/${lessonId}`, {
+      return apiFetch(`/api/v1/schedule/lessons/${lessonId}`, {
         method: "DELETE",
       });
     },

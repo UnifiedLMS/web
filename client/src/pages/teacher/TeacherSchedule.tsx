@@ -101,8 +101,8 @@ export default function TeacherSchedule() {
   // Update lesson mutation
   const updateLessonMutation = useMutation({
     mutationFn: async ({ groupEn, lessonId, data }: { groupEn: string; lessonId: string; data: z.infer<typeof lessonEditSchema> }) => {
-      return apiFetch(`/api/v1/schedule/${groupEn}/${lessonId}/revision`, {
-        method: "PUT",
+      return apiFetch(`/api/v1/schedule/lessons/${lessonId}`, {
+        method: "PATCH",
         body: JSON.stringify(data),
       });
     },
